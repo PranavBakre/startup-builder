@@ -1,0 +1,10 @@
+[gd_resource type="TileSet" load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tiles/ground.png" id="1_ground"]
+[ext_resource type="Texture2D" path="res://assets/tiles/ground_grass.png" id="2_grass"]
+[ext_resource type="Texture2D" path="res://assets/tiles/wall.png" id="3_wall"]
+[ext_resource type="Texture2D" path="res://assets/tiles/tree.png" id="4_tree"]
+[ext_resource type="Texture2D" path="res://assets/tiles/bench.png" id="5_bench"]
+
+[resource]
+tile_size = Vector2i(1024, 1024)

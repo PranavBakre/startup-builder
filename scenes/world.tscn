@@ -1,0 +1,65 @@
+[gd_scene load_steps=3 format=3 uid="uid://bvjx2k8n3yw7r"]
+
+[ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
+[ext_resource type="TileSet" path="res://resources/tiles.tres" id="2_tileset"]
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_world")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = ExtResource("2_tileset")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="DialogueBox" type="Panel" parent="CanvasLayer"]
+visible = false
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -150.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/DialogueBox"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/DialogueBox/MarginContainer"]
+layout_mode = 2
+
+[node name="NPCName" type="Label" parent="CanvasLayer/DialogueBox/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "NPC Name"
+
+[node name="DialogueText" type="Label" parent="CanvasLayer/DialogueBox/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Dialogue text goes here..."
+autowrap_mode = 3
+
+[node name="InteractPrompt" type="Label" parent="CanvasLayer"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Press C to chat"
+horizontal_alignment = 1
