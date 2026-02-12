@@ -2,7 +2,7 @@
 
 ## Overview
 
-A 2.5D top-down startup simulator where the player builds a digital product company from scratch — from discovering a real-world problem to scaling a billion-dollar business. The camera sits at roughly a 10-degree angle, giving slight depth to a flat X/Y movement plane.
+An HD-2D top-down startup simulator where the player builds a digital product company from scratch — from discovering a real-world problem to scaling a billion-dollar business. 2D sprite art exists in a 3D-lit world with real-time shadows, depth of field, and atmospheric lighting — inspired by Octopath Traveler's visual style, applied to a warm, grounded startup setting.
 
 **Tone:** Serious but playful. Grounded and warm — not satirical. Think Stardew Valley meets startup culture.
 
@@ -112,8 +112,9 @@ The player must navigate these cycles strategically to grow toward the $1B valua
 
 ### Interaction System
 
-- **Movement:** Pokemon-style tile-based 2.5D. Grid-based movement on a tile map with a fixed elevated camera. Depth is conveyed through sprite layering (buildings you walk behind, trees that overlap the player, shadows for grounding). Not free-roaming isometric — it's classic RPG tile navigation.
-- **Map Structure:** The world is a tile map with distinct zones. Buildings (office, hiring center, launch venue) are map locations the player enters, which transition into phase-specific interiors/UIs.
+- **Movement:** Grid-based movement on a tile map with a fixed elevated camera. Depth is conveyed through real shadows, elevation, and volumetric rendering — objects have visible height and volume, not just flat sprite layering. Not free-roaming isometric — it's tile-based navigation with 3D-style visuals.
+- **Navigation Model:** Hybrid. Early game relies on walking as the primary interaction. As management mechanics scale up, a **fast-travel system** unlocks — the player can quick-travel to previously discovered locations (office, job board, etc.). Walk to discover, fast-travel to manage.
+- **Map Structure:** The world is a tile map with distinct zones. Buildings (office, hiring center, launch venue) are map locations the player enters, which transition into phase-specific interiors/UIs. The map grows over time as new zones, buildings, and NPCs appear.
 - **NPC Interaction:** NPCs occupy tiles on the map. The player walks up to an NPC and presses a keyboard shortcut (e.g., `C`) to initiate chat.
 - **Building Interaction:** Walk onto a building entrance tile to enter and trigger phase-specific mechanics.
 
@@ -194,6 +195,17 @@ The game should be structured with **modular systems** so each phase (discovery,
 - **Auto-pause after 1 week of inactivity.** If the player is absent for 7 real-world days (~7 in-game months), the game enters a **paused state** to prevent passive bankruptcy. This means the player must have a minimum cash reserve that can sustain operations for ~7 months before going idle safely.
 - **Notification log exists.** When the player returns, they receive a summary of everything that happened while they were away (features shipped, customers gained/lost, revenue, employee proposals, market changes, etc.).
 
+### Visual Style
+- **HD-2D, inspired by Octopath Traveler.** 2D sprite art placed in a 3D-lit world. Characters, NPCs, and objects are flat 2D sprites. The environment has real-time lighting, cast shadows, depth of field, and atmospheric effects (bloom, ambient occlusion, light shafts). The world feels physically real even though the art is 2D.
+- **The "depth" comes from the renderer, not the sprites.** Sprites are hand-drawn/pixel art style, but they exist in a 3D scene with real light sources, shadow casting, and camera depth effects. This is what gives HD-2D its distinctive look — flat art with cinematic lighting.
+- **Warm, grounded tone.** The lighting and art direction should reinforce the Stardew-meets-startup vibe — warm colors, soft shadows, inviting atmosphere. Not dark or dramatic like Octopath's dungeons, but using the same rendering techniques.
+
+### Walking & Navigation
+- **Walking is the idea engine.** NPCs are the source of all product direction — initial problems, feature ideas, customer feedback, pivot opportunities. The player discovers these by walking and talking. This remains true throughout the entire game, not just the early phases.
+- **Walking shifts from primary to secondary.** In early phases (problem discovery, company founding), walking IS the game — it's how the player spends most of their time. As management mechanics scale up (hiring, product dev, funding), management becomes the primary activity and walking becomes the strategic activity the player does when the startup needs new direction.
+- **Fast-travel complements walking.** Once the player discovers a location (office, job board, investor venue), it becomes fast-travelable. Walking is for exploration and discovery; fast-travel is for routine management. The player is never forced to walk to a known location repeatedly.
+- **The map keeps growing.** New NPCs, buildings, and zones appear as the game progresses, ensuring there's always something new to discover by walking. The world grows alongside the startup.
+
 ---
 
 ## Remaining Open Questions
@@ -205,6 +217,13 @@ These decisions are still unresolved and should be addressed as development prog
 
 ### Scope & MVP
 - **What is Phase 1 of development?** Recommendation: Movement + NPC interaction + problem discovery + problem selection. If that core loop is fun, everything else layers on top.
+
+### Tech Stack
+- **Godot is the strong frontrunner.** HD-2D requires rendering 2D sprites in a 3D scene with real-time lighting and shaders. Godot handles this well — it supports 2D-in-3D workflows, has a real-time lighting/shadow system, and has shader support for bloom, depth of field, and ambient effects. It's also free, open source, and exports to web and mobile.
+- **Unity remains an alternative** if Godot's rendering proves insufficient for the HD-2D quality bar. Unity has stronger shader tooling (Shader Graph) and more mature lighting. But it's heavier and its UI system is worse for this game's needs.
+- **Browser-only (Phaser) is ruled out.** The HD-2D visual style requires a 3D rendering pipeline that browser-only 2D frameworks cannot provide.
+- **Platform: both desktop and mobile.** Desktop uses keyboard input (arrow keys / WASD for movement, keyboard shortcuts for interaction). Mobile uses a virtual joystick (shooter-style circle pad) for movement and tap for interaction. Same game, same mechanics, different input methods. Godot supports both natively.
+- **Final engine choice is not yet locked in** — pending prototyping of the HD-2D look in Godot to validate the visual quality.
 
 ---
 
