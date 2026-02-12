@@ -2,12 +2,14 @@
 
 ## Project Overview
 
-Startup Simulator is a 2.5D top-down game where the player builds a digital product company from scratch — from discovering a real-world problem to scaling a billion-dollar business. Pokemon-style tile navigation, NPC interactions, economic simulation, and startup lifecycle mechanics.
+Startup Simulator is an HD-2D top-down game where the player builds a digital product company from scratch — from discovering a real-world problem to scaling a billion-dollar business. 2D sprite art in a 3D-lit world (Octopath Traveler-inspired), tile-based navigation, NPC interactions, economic simulation, and startup lifecycle mechanics.
 
 **Tone:** Serious but playful. Grounded and warm — not satirical. Stardew Valley meets startup culture.
+**Visual Style:** HD-2D — 2D sprites with real-time 3D lighting, shadows, depth of field, and atmospheric effects.
+**Platforms:** Desktop + Mobile (virtual joystick on mobile, keyboard on desktop)
 
 **Status:** Pre-development (design phase)
-**Tech Stack:** TBD
+**Tech Stack:** Godot (strong frontrunner, pending prototype validation)
 **Current Target:** v0.1
 
 ## Documentation Index
