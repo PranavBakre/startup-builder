@@ -48,7 +48,7 @@ The [full game brief](docs/startup-simulator-game-brief.md) describes the comple
 
 1. **Docs first, code second** — Before building any feature, document it in `docs/features/<feature-name>.md`. Get alignment on approach, then implement.
 2. **One version at a time** — Do not build mechanics from a later version. If tempted, note it in the roadmap and move on.
-3. **Iteration 0 for each version** — Every sub-version starts with the smallest testable proof of its core mechanic before building full UI.
+3. **Iteration 0 for each version** — Every sub-version starts with the smallest working proof of its core mechanic. For v0.1 this is a standalone console proof. For later versions, it's the new mechanic wired into the existing game at its simplest.
 4. **Playable at every version** — Each sub-version must result in something a player can interact with. No "infrastructure only" versions.
 5. **Feature-tagged documentation** — Every feature gets a doc in `docs/features/` with tags for grepability.
 6. **Checkpoint = commit** — After every working increment, commit with a descriptive message. Git history is project history.

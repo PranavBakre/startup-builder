@@ -26,21 +26,32 @@ The most important question:
 
 Iteration 0 should be:
 - **One sentence** to describe
-- **No UI required** — terminal output, console log, or browser console is fine
 - **Proves the core mechanic works**
 - **Buildable in under an hour**
 
 If you can't define iteration 0 clearly, the version scope is too broad — cut something.
 
-**Examples of good iteration 0s:**
-- v0.1: Render a grid in the console, move a player symbol with keyboard input, detect NPC adjacency, print dialogue
-- v0.4: Create a job posting object, generate random applicant objects, select one to hire, update a burn rate number
-- v0.8: Calculate valuation from mock data, accept a text pitch, score it, generate a funding offer with equity math
+**For the first version (v0.1):** There's no game yet. Iteration 0 is a standalone console/terminal proof — render a grid, move a symbol, detect adjacency, print text. No graphics, no engine, just proof of concept.
 
-**Examples of bad iteration 0s (too big):**
-- "Build the tile map rendering engine with camera"
-- "Set up the full hiring UI with applicant cards"
-- "Implement the complete pitch evaluation pipeline"
+**For every version after that:** The previous version's game already exists. Iteration 0 is the new mechanic integrated into the existing game at its simplest — minimal UI, hardcoded data, no polish, but wired into what's already running.
+
+**Example — v0.4 (The Team):**
+
+The core mechanic is hiring. Here's how it breaks down:
+
+- **v0.4.0 (iteration 0):** A hardcoded job posting and 2-3 hardcoded applicants appear in-game. Player picks one. Burn rate updates on the existing HUD. No job creation UI, no dynamic applicants — just proof that hiring connects to the economy system.
+- **v0.4 (full version):** Player creates custom job postings with role and salary range. NPC applicants arrive dynamically over in-game time with randomized attributes. Full hire/reject flow. Employee roster panel.
+
+Iteration 0 validates the mechanic with hardcoded data. The full version makes it dynamic and gives it a proper UI.
+
+**Example — v0.1 (Walk & Talk):**
+
+The core mechanic is exploration and NPC interaction. Since no game exists yet, iteration 0 is a standalone console proof:
+
+- **v0.1.0 (iteration 0):** Console grid, move a text symbol with keyboard input, detect adjacency to an NPC tile, print their dialogue as text output.
+- **v0.1 (full version):** Rendered tile map with sprites, animated player movement, camera follow, NPC sprites on the map, dialogue overlay UI.
+
+**Red flag:** If your iteration 0 sounds like the full version, it's too big. Cut until there's a clear gap between the two.
 
 ### 3. Challenge Scope
 
