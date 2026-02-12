@@ -61,14 +61,109 @@ Top-down with a slight tilt to give depth (the "2.5D" feel). The camera follows 
 - No camera movement, no sprites, no 2.5D angle — flat grid, proof of concept
 
 **Acceptance criteria for iteration 0:**
-- [ ] Grid renders in browser with distinct tile types (ground, wall, NPC)
-- [ ] Player moves one tile per keypress (arrow keys or WASD)
-- [ ] Player cannot move onto wall or NPC tiles
-- [ ] When adjacent to an NPC, a visual indicator appears
-- [ ] Pressing interact key (C) while adjacent to NPC opens dialogue
-- [ ] Dialogue displays line by line, advancing on keypress
-- [ ] Dialogue closes after the last line
-- [ ] At least 2 NPCs with different dialogue
+- [x] Grid renders in browser with distinct tile types (ground, wall, NPC)
+- [x] Player moves one tile per keypress (arrow keys or WASD)
+- [x] Player cannot move onto wall or NPC tiles
+- [x] When adjacent to an NPC, a visual indicator appears
+- [x] Pressing interact key (C) while adjacent to NPC opens dialogue
+- [x] Dialogue displays line by line, advancing on keypress
+- [x] Dialogue closes after the last line
+- [x] At least 2 NPCs with different dialogue
+
+**Status:** ✅ Complete (commit c56ea86)
+
+---
+
+### Iteration 1: Visual Foundation
+
+**Goal:** Replace colored rectangles with actual tile-based visuals that show in the Godot editor.
+
+**What we're building:**
+Replace the `_draw()` approach with proper Godot nodes so the game looks real and is editable in the editor.
+
+**Technical approach:**
+
+1. **TileMap node with TileSet**
+   - Create a TileSet resource with tile definitions
+   - Use placeholder tile sprites (simple 16x16 or 32x32 pixel art)
+   - Define ground, wall, and prop tiles with collision shapes
+   - Replace the 2D array tile system with Godot's TileMap
+   - Keep the same 20x15 map dimensions
+
+2. **Player as Sprite2D**
+   - Create a Player scene (Node2D with Sprite2D child)
+   - Use a simple placeholder sprite (16x16 or 32x32)
+   - Keep grid-based position tracking (convert to world position for rendering)
+   - Movement still instant (no tweening yet — that's iteration 2)
+
+3. **NPCs as Sprite2D**
+   - Create an NPC scene (Area2D with Sprite2D and CollisionShape2D)
+   - Each NPC is an instance with distinct sprite
+   - Position them on the grid like before
+   - Keep the same dialogue data structure
+
+4. **Scene structure visible in editor**
+   - Main scene: World (Node2D)
+     - TileMap (ground, walls, props)
+     - Player (instanced scene)
+     - NPCs (instanced scenes)
+     - UI layer (CanvasLayer with dialogue box)
+   - Everything visible and editable in editor 2D view
+
+**What stays the same:**
+- Grid-based movement logic (still one tile per keypress)
+- Collision detection (but uses TileMap collision instead of array checks)
+- Adjacency detection and dialogue system
+- Input handling
+- No camera movement yet (iteration 2)
+
+**What changes:**
+- Visual representation (sprites instead of colored rectangles)
+- Scene structure (proper node hierarchy)
+- Map data (TileMap instead of 2D array)
+- Editability (everything visible in editor)
+
+**Placeholder art approach:**
+- Keep it minimal — solid-colored squares or very simple pixel art
+- Focus: structure and systems, not visual polish
+- Can use Godot's built-in colored tiles or generate simple sprites
+- Real art comes in iteration 3
+
+**Acceptance criteria for iteration 1:**
+- [ ] TileMap renders in both editor and game with distinct tile types
+- [ ] Player appears as a sprite (not colored rectangle)
+- [ ] 2 NPCs appear as sprites with different visuals
+- [ ] Player moves one tile per keypress (same as iteration 0)
+- [ ] Collision detection works with TileMap collision layers
+- [ ] Adjacency detection still works with new sprite-based NPCs
+- [ ] Dialogue system works identically to iteration 0
+- [ ] All game objects visible in Godot editor 2D view
+- [ ] Scene structure is clean and organized
+
+**Files to create/modify:**
+- `scenes/world.tscn` (main game scene, replaces iteration_0.tscn)
+- `scenes/player.tscn` (player character scene)
+- `scenes/npc.tscn` (NPC base scene)
+- `scripts/world.gd` (main game logic, refactored from iteration_0.gd)
+- `scripts/player.gd` (player movement logic)
+- `scripts/npc.gd` (NPC behavior and dialogue)
+- `resources/tiles.tres` (TileSet resource)
+- `assets/tiles/` (tile sprites)
+- `assets/characters/` (player and NPC sprites)
+
+**Deferred to iteration 2:**
+- Smooth movement tweening
+- Camera following
+- 4-directional player sprites
+- Sprite layering / Y-sort for depth
+
+**Deferred to iteration 3:**
+- Additional NPCs (3-5 total)
+- Better quality sprites
+- Map design polish
+- Dialogue visual effects
+
+---
 
 ### Full Implementation
 
@@ -193,11 +288,15 @@ PROP = 2     // blocking (trees, benches, lamp posts)
 
 ## Status
 
-- [ ] Iteration 0 complete
-- [ ] Full implementation complete
+- [x] Iteration 0 complete (2026-02-12, commit c56ea86)
+- [ ] Iteration 1 complete
+- [ ] Iteration 2 complete
+- [ ] Iteration 3 complete (full v0.1)
 - [ ] Playtested
 - [ ] Doc finalized with code index
 
 ## Changes
 
 - 2026-02-12: Initial documentation (pre-build)
+- 2026-02-12: Iteration 0 complete - colored grid prototype with movement, collision, adjacency, and dialogue
+- 2026-02-12: Added iteration 1 specification - visual foundation with TileMap and sprites
