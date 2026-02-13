@@ -159,6 +159,23 @@ Win/lose conditions, recovery mechanics, idle systems, and polish. A complete ga
 
 ---
 
+## Pre-V2 — Art Pass
+
+Replace AI-generated 2D sprites with 3D models before V2 feature work begins.
+
+**Why:** AI-generated images have two fundamental problems:
+1. **Baked shadows** — each tile has its own shadow direction/intensity, preventing consistent lighting and blocking true HD-2D (renderer-driven shadows, depth of field, bloom)
+2. **Inter-tile variance** — independently generated textures don't seamlessly match at boundaries; roads, grass, and building edges all have subtle mismatches
+
+**What changes:**
+- Tiles, buildings, props → 3D models rendered by Godot (consistent lighting, deterministic UVs, seamless tiling)
+- Characters → either 3D models or hand-drawn sprite sheets (TBD)
+- Remove `generate_sprites.py` dependency — assets become source-controlled models
+
+**What stays:** Map layout, game logic, NPC system, dialogue — all code carries forward unchanged.
+
+---
+
 ## V2+ (Parked)
 
 Out of scope until V1 is complete. Documented in the [game brief](startup-simulator-game-brief.md) under "V2 Features" and "Future Considerations."
