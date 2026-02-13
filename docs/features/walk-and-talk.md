@@ -169,15 +169,13 @@ Replace the `_draw()` approach with proper Godot nodes so the game looks real an
 
 ### Iteration 2: Movement & Camera Polish
 
-**Status:** ⏭️ Skipped (jumped directly to iteration 3)
+**Status:** ✅ Completed (spread across iterations 3 and camera commit 7c0092d)
 
-Originally planned:
-- Smooth tile-to-tile movement transitions
-- Camera following player
-- Sprite layering for depth
-- 4-directional player sprites
-
-**Decision:** Deferred to later. Iteration 3 features were higher priority.
+Originally planned as a separate iteration, but the work was done incrementally:
+- Smooth tile-to-tile movement transitions — ✅ tween animation in `player.gd` (0.15s per tile, 0.2s diagonal)
+- Camera following player — ✅ Camera2D with position smoothing (speed 10.0) in `world.tscn`
+- Sprite layering for depth — ✅ y_sort_enabled on World, Player, NPC; z_index=-1 on tiles
+- 4-directional player sprites — ❌ Only left/right flip (no up/down sprites yet)
 
 ---
 
@@ -231,11 +229,10 @@ Originally planned:
 - `scenes/world.tscn` - Added TileSet resource reference
 - `resources/tiles.tres` - Created (basic TileSet)
 
-**Notes:**
-- Iteration 2 (smooth movement, camera) was skipped
+**Known issues:**
 - Maya NPC needs sprite generation (`npc_maya.png`)
 - TileSet resource exists but not fully configured for editor use
-- Current implementation uses programmatic sprite rendering
+- Current implementation uses programmatic sprite rendering (not TileMap node)
 
 ---
 
@@ -349,9 +346,9 @@ PROP = 2     // blocking (trees, benches, lamp posts)
 - [x] A single-zone tile map renders with ground, walls, and props
 - [x] Player moves tile-by-tile with arrow keys or WASD
 - [x] Collision prevents walking through walls, props, and NPCs
-- [ ] Smooth visual movement between tiles (deferred - iteration 2 skipped)
-- [ ] Camera follows the player (deferred - iteration 2 skipped)
-- [x] Sprite layering gives depth feel (z-index, tiles behind characters)
+- [x] Smooth visual movement between tiles (tween, 0.15s per tile)
+- [x] Camera follows the player (Camera2D with position smoothing)
+- [x] Sprite layering gives depth feel (y_sort_enabled, z-index on tiles)
 - [x] 3 NPCs visible on the map at fixed positions (Alex, Jordan, Maya)
 - [x] Walking adjacent to an NPC shows an animated interaction prompt
 - [x] Pressing C while adjacent opens a dialogue overlay
@@ -359,13 +356,17 @@ PROP = 2     // blocking (trees, benches, lamp posts)
 - [x] Each NPC's dialogue surfaces a distinct, realistic startup problem
 - [x] Dialogue closes after the last line and returns control to the player
 - [x] The game runs (Godot desktop, exportable to web)
+- [ ] 2.5D perspective — currently flat top-down, needs depth/angle feel
 
 ## Status
 
 - [x] Iteration 0 complete (2026-02-12, commit c56ea86)
 - [x] Iteration 1 complete (2026-02-12)
-- [x] Iteration 2 skipped (deferred)
-- [x] Iteration 3 complete (2026-02-12) ← **v0.1 COMPLETE**
+- [x] Iteration 2 complete (spread across later iterations + commit 7c0092d)
+- [x] Iteration 3 complete (2026-02-12)
+- [ ] 2.5D perspective (flat top-down → needs depth/angle feel)
+- [ ] 4-directional player sprites (only left/right flip currently)
+- [ ] Maya NPC sprite (`npc_maya.png` missing)
 - [ ] Playtested (full playthrough)
 - [ ] Doc finalized with code index
 

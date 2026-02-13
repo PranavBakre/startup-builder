@@ -9,7 +9,7 @@ var dialogue: Array  # Untyped array to avoid assignment errors
 var problem: Dictionary
 
 # Tile size (must match world's TILE_SIZE)
-const TILE_SIZE = 32
+const TILE_SIZE = 320
 
 func _ready():
 	update_world_position()
@@ -30,8 +30,9 @@ func setup(data: Dictionary):
 	var sprite = $Sprite2D
 	if texture and sprite:
 		sprite.texture = texture
-		# Scale down from 1024x1024 to 32x32
-		sprite.scale = Vector2(0.03125, 0.03125)
+		# Scale from source texture to TILE_SIZE
+		var tex_size = texture.get_size()
+		sprite.scale = Vector2(float(TILE_SIZE) / tex_size.x, float(TILE_SIZE) / tex_size.y)
 	else:
 		print("ERROR: Could not load texture or find sprite for NPC: ", npc_id)
 
@@ -39,7 +40,7 @@ func setup(data: Dictionary):
 
 func update_world_position():
 	# Center sprite on tile (sprites are centered by default)
-	position = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE/2, grid_pos.y * TILE_SIZE + TILE_SIZE/2)
+	position = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE / 2.0, grid_pos.y * TILE_SIZE + TILE_SIZE / 2.0)
 
 func get_grid_position() -> Vector2i:
 	return grid_pos

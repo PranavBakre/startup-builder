@@ -5,7 +5,7 @@ class_name Player
 var grid_pos: Vector2i = Vector2i(5, 7)
 
 # Tile size (must match world's TILE_SIZE)
-const TILE_SIZE = 32
+const TILE_SIZE = 320
 
 # Movement animation
 var is_moving = false
@@ -44,7 +44,7 @@ func _update_sprite_direction():
 
 func _animate_to_position():
 	is_moving = true
-	var target_pos = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE/2, grid_pos.y * TILE_SIZE + TILE_SIZE/2)
+	var target_pos = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE / 2.0, grid_pos.y * TILE_SIZE + TILE_SIZE / 2.0)
 
 	# Diagonal movement is slightly slower (longer distance)
 	var is_diagonal = abs(last_direction.x) + abs(last_direction.y) == 2
@@ -60,7 +60,7 @@ func _on_move_finished():
 
 func update_world_position():
 	# Center sprite on tile (sprites are centered by default)
-	position = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE/2, grid_pos.y * TILE_SIZE + TILE_SIZE/2)
+	position = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE / 2.0, grid_pos.y * TILE_SIZE + TILE_SIZE / 2.0)
 
 func get_grid_position() -> Vector2i:
 	return grid_pos
