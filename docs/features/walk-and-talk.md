@@ -1,379 +1,220 @@
 <!-- @version 0.1 -->
-<!-- @systems movement rendering npc dialogue -->
-<!-- @tags tile-map player-movement npc-interaction dialogue collision camera -->
+<!-- @systems movement rendering npc dialogue camera sprite-generation -->
+<!-- @tags tile-map player-movement npc-interaction dialogue collision camera zoom indiranagar -->
 # Walk & Talk
 
-The player moves around a tile-based map, encounters NPCs, and discovers startup problems through conversation.
+The player moves around a tile-based map inspired by Indiranagar, Bangalore, encounters NPCs, and discovers startup problems through conversation.
 
 ## Overview
 
-- Grid-based player movement on a single-zone tile map with collision detection
-- 3–5 stationary NPCs placed at fixed positions on the map
-- Interact with NPCs by walking adjacent and pressing a key to open dialogue
+- Grid-based player movement on a 60x50 tile map with Indiranagar street layout
+- 5 stationary NPCs placed at road intersections and landmarks
+- Interact with NPCs by walking adjacent and pressing C to open dialogue
 - Each NPC delivers a unique dialogue sequence that surfaces a real-world startup problem
-- 2.5D top-down perspective with sprite layering for depth
+- 2.5D aesthetic via Stardew Valley-style sprite art (3/4 view props/characters, top-down tiles)
+- Camera zoom (trackpad pinch, mouse wheel, Cmd+/-) with movement speed scaling
 
 ## Design
 
-The player spawns on a small town-like map. They move tile-by-tile using arrow keys or WASD. The map has ground tiles, obstacle tiles (buildings, trees, fences), and NPC tiles. NPCs stand in fixed positions around the map — near a coffee shop, outside a building, sitting on a bench, etc.
+The player spawns at the 100 Feet Road × CMH Road intersection — the heart of Indiranagar. They move tile-by-tile using arrow keys. The map recreates Indiranagar's distinctive grid: tree-lined avenues, numbered cross streets and mains, commercial strips along 100 Feet Road and 12th Main, residential blocks with compound walls, and parks with fountains and benches.
 
-When the player is adjacent to an NPC (one tile away, facing them), a prompt appears (e.g., "Press C to chat"). Pressing the interact key opens a dialogue overlay. The NPC speaks line by line — the player advances dialogue by pressing the interact key again or pressing Enter. The first layer of every NPC's dialogue reveals a problem they're experiencing with a digital product or a real-world pain point.
-
-After reading all dialogue, the overlay closes and the player can continue exploring. There is no problem journal or selection mechanic yet — the player simply discovers problems by talking to people. That's v0.2.
+When the player is adjacent to an NPC (one tile away), a bouncing prompt appears ("Press C to chat"). Pressing C opens a dialogue overlay with typewriter effect. Each NPC reveals a problem they're experiencing. After reading all dialogue, the overlay closes and the player continues exploring.
 
 ### Map Layout
 
-A single zone, roughly 20x15 tiles. Contains:
-- Open ground (walkable)
-- A few buildings (collision — the player walks around them, not into them)
-- Simple props: trees, benches, lamp posts (collision)
-- 3–5 NPCs scattered in interesting positions
+60x50 tiles at 320px per tile. Indiranagar-inspired grid:
 
-No building interiors. No map transitions. Just one continuous outdoor zone.
+**Major roads (2 tiles wide):**
+- 100 Feet Road — E-W artery at y=23-24
+- CMH Road — N-S artery at x=4-5
 
-### NPC Dialogue
+**Secondary roads (1 tile wide):**
+- 12th Main (cafe/commercial strip) at x=42
+- 80 Feet Road at y=40
+- 6 cross streets at y=7, 14, 19, 30, 36, 46
+- 6 main roads at x=12, 20, 28, 35, 50, 56
 
-Each NPC has:
-- A name
-- A fixed position on the map
-- A dialogue array (ordered lines of text)
-- A problem embedded in the dialogue (the core reason this NPC exists)
+**Zones:**
+- Commercial (wall_brick) — blocks along 100 Feet Road and near 12th Main
+- Residential (wall_wood) — all other blocks
 
-Dialogue is linear — the same lines play every time. No branching, no choices. The player reads and moves on.
+**Parks:**
+1. Indiranagar Park (x=6-11, y=31-35) — fountain, benches, trees, flowers
+2. Defence Colony Playground (x=51-55, y=41-45)
+3. BDA Complex / Metro green (x=6-11, y=8-13)
+
+**Tree-lined streets** — Indiranagar's signature. Trees on both sides of every road:
+- Major roads: alternating trees and lamp posts every 2 tiles
+- Minor roads: trees every 3 tiles on both sides
+
+**Tile types (19):**
+| Type | Visual | Walkable |
+|---|---|---|
+| GROUND | Dark gray asphalt | Yes |
+| GROUND_GRASS | Lush tropical green | Yes |
+| GROUND_DIRT | Reddish laterite soil | Yes |
+| GROUND_SAND | Sandy path | Yes |
+| WALL | Gray concrete rooftop | No |
+| WALL_BRICK | Terracotta rooftop | No |
+| WALL_WOOD | Ochre painted rooftop | No |
+| ROOF | Dark concrete rooftop | No |
+| TREE | Tropical rain tree | No |
+| TREE_PINE | Ashoka tree | No |
+| BUSH | Bougainvillea | No |
+| FLOWERS | Marigolds & jasmine | No |
+| BENCH | Green cast iron bench | No |
+| LAMP_POST | Modern street lamp | No |
+| FENCE | Compound wall with railing | No |
+| FOUNTAIN | Stone park fountain | No |
+| MAILBOX | Red Indian post box | No |
+| TRASH_CAN | Green municipal dustbin | No |
+| SIGN_SHOP | Colorful shop signboard | No |
+
+### NPCs
+
+5 NPCs placed on roads/intersections for easy access:
+
+| NPC | Position | Location | Problem |
+|---|---|---|---|
+| Alex | (25, 23) | 100 Feet Road | Expense tracking too complex for freelancers |
+| Jordan | (12, 33) | Main road near park | No good way to share research notes |
+| Maya | (42, 16) | 12th Main | Small bakery needs simple online ordering |
+| Sam | (50, 36) | Road intersection east | Barber needs affordable appointment booking |
+| Priya | (28, 46) | Southern cross road | Teacher needs parent communication tool |
+
+NPCs use `_find_nearest_walkable()` fallback to ensure they spawn on walkable tiles.
 
 ### Camera
 
-Top-down with a slight tilt to give depth (the "2.5D" feel). The camera follows the player, keeping them roughly centered. Sprite layering ensures objects "above" the player on screen (like a tree canopy) overlap correctly.
+- Default zoom: 0.5
+- Zoom range: 0.05 to 2.0
+- Controls: trackpad pinch, mouse scroll wheel, Cmd+/-, Cmd+0 (reset)
+- Smooth zoom interpolation (lerp, speed 8.0)
+- Camera follows player with position smoothing (speed 10.0)
+
+### Movement
+
+- Grid-based, one tile per step at default zoom
+- Movement speed scales with zoom level: `max(1, round(0.5 / current_zoom))`
+- At default zoom (0.5) = 1 tile, zoomed out = up to ~10 tiles per step
+- Tween animation: 0.15s per tile, 0.2s diagonal
+- Continuous movement when holding keys
 
 ## Implementation Plan
 
-### Iteration 0
-
-**Goal:** Prove that tile-based movement, collision, NPC adjacency detection, and dialogue display work together.
-
-**What it looks like:**
-- A rendered grid in the browser (colored rectangles — no sprites yet)
-- A player tile (distinct color) that moves with arrow keys, one tile per keypress
-- Wall/obstacle tiles that block movement
-- 2–3 NPC tiles (distinct color) at hardcoded positions
-- Adjacency detection: when the player is next to an NPC, a text label appears
-- Pressing the interact key prints the NPC's dialogue lines sequentially in a basic text box overlay
-- No camera movement, no sprites, no 2.5D angle — flat grid, proof of concept
-
-**Acceptance criteria for iteration 0:**
-- [x] Grid renders in browser with distinct tile types (ground, wall, NPC)
-- [x] Player moves one tile per keypress (arrow keys or WASD)
-- [x] Player cannot move onto wall or NPC tiles
-- [x] When adjacent to an NPC, a visual indicator appears
-- [x] Pressing interact key (C) while adjacent to NPC opens dialogue
-- [x] Dialogue displays line by line, advancing on keypress
-- [x] Dialogue closes after the last line
-- [x] At least 2 NPCs with different dialogue
-
+### Iteration 0 — Grid Prototype
 **Status:** ✅ Complete (2026-02-12, commit c56ea86)
 
----
+Colored rectangle grid in Godot proving movement, collision, adjacency, and dialogue.
 
-### Iteration 1: Visual Foundation
-
+### Iteration 1 — Visual Foundation
 **Status:** ✅ Complete (2026-02-12)
 
-**Goal:** Replace colored rectangles with actual tile-based visuals that show in the Godot editor.
+Replaced colored rectangles with Sprite2D nodes, proper scene structure (world.tscn, player.tscn, npc.tscn), and placeholder sprites.
 
-**What we're building:**
-Replace the `_draw()` approach with proper Godot nodes so the game looks real and is editable in the editor.
-
-**Technical approach:**
-
-1. **TileMap node with TileSet**
-   - Create a TileSet resource with tile definitions
-   - Use placeholder tile sprites (simple 16x16 or 32x32 pixel art)
-   - Define ground, wall, and prop tiles with collision shapes
-   - Replace the 2D array tile system with Godot's TileMap
-   - Keep the same 20x15 map dimensions
-
-2. **Player as Sprite2D**
-   - Create a Player scene (Node2D with Sprite2D child)
-   - Use a simple placeholder sprite (16x16 or 32x32)
-   - Keep grid-based position tracking (convert to world position for rendering)
-   - Movement still instant (no tweening yet — that's iteration 2)
-
-3. **NPCs as Sprite2D**
-   - Create an NPC scene (Area2D with Sprite2D and CollisionShape2D)
-   - Each NPC is an instance with distinct sprite
-   - Position them on the grid like before
-   - Keep the same dialogue data structure
-
-4. **Scene structure visible in editor**
-   - Main scene: World (Node2D)
-     - TileMap (ground, walls, props)
-     - Player (instanced scene)
-     - NPCs (instanced scenes)
-     - UI layer (CanvasLayer with dialogue box)
-   - Everything visible and editable in editor 2D view
-
-**What stays the same:**
-- Grid-based movement logic (still one tile per keypress)
-- Collision detection (but uses TileMap collision instead of array checks)
-- Adjacency detection and dialogue system
-- Input handling
-- No camera movement yet (iteration 2)
-
-**What changes:**
-- Visual representation (sprites instead of colored rectangles)
-- Scene structure (proper node hierarchy)
-- Map data (TileMap instead of 2D array)
-- Editability (everything visible in editor)
-
-**Placeholder art approach:**
-- Keep it minimal — solid-colored squares or very simple pixel art
-- Focus: structure and systems, not visual polish
-- Can use Godot's built-in colored tiles or generate simple sprites
-- Real art comes in iteration 3
-
-**Acceptance criteria for iteration 1:**
-- [ ] TileMap renders in both editor and game with distinct tile types
-- [ ] Player appears as a sprite (not colored rectangle)
-- [ ] 2 NPCs appear as sprites with different visuals
-- [ ] Player moves one tile per keypress (same as iteration 0)
-- [ ] Collision detection works with TileMap collision layers
-- [ ] Adjacency detection still works with new sprite-based NPCs
-- [ ] Dialogue system works identically to iteration 0
-- [ ] All game objects visible in Godot editor 2D view
-- [ ] Scene structure is clean and organized
-
-**Files to create/modify:**
-- `scenes/world.tscn` (main game scene, replaces iteration_0.tscn)
-- `scenes/player.tscn` (player character scene)
-- `scenes/npc.tscn` (NPC base scene)
-- `scripts/world.gd` (main game logic, refactored from iteration_0.gd)
-- `scripts/player.gd` (player movement logic)
-- `scripts/npc.gd` (NPC behavior and dialogue)
-- `resources/tiles.tres` (TileSet resource)
-- `assets/tiles/` (tile sprites)
-- `assets/characters/` (player and NPC sprites)
-
-**Deferred to iteration 2:**
-- Smooth movement tweening
-- Camera following
-- 4-directional player sprites
-- Sprite layering / Y-sort for depth
-
-**Deferred to iteration 3:**
-- Additional NPCs (3-5 total)
-- Better quality sprites
-- Map design polish
-- Dialogue visual effects
-
----
-
-### Iteration 2: Movement & Camera Polish
-
-**Status:** ✅ Completed (spread across iterations 3 and camera commit 7c0092d)
-
-Originally planned as a separate iteration, but the work was done incrementally:
-- Smooth tile-to-tile movement transitions — ✅ tween animation in `player.gd` (0.15s per tile, 0.2s diagonal)
-- Camera following player — ✅ Camera2D with position smoothing (speed 10.0) in `world.tscn`
-- Sprite layering for depth — ✅ y_sort_enabled on World, Player, NPC; z_index=-1 on tiles
-- 4-directional player sprites — ❌ Only left/right flip (no up/down sprites yet)
-
----
-
-### Iteration 3: Tile Sprites & Content Polish
-
+### Iteration 2 — Movement & Camera Polish
 **Status:** ✅ Complete (2026-02-12)
 
-**Goal:** Add tile sprite rendering, more NPCs, and visual polish.
+Smooth tween movement, Camera2D follow with smoothing, y_sort for depth.
 
-**What was built:**
+### Iteration 3 — Tile Sprites & Content
+**Status:** ✅ Complete (2026-02-12)
 
-1. **Programmatic tile sprite rendering**
-   - Each tile is rendered as a Sprite2D with appropriate texture
-   - Tiles scaled from 1024×1024 to 32×32
-   - Z-index layering (tiles behind characters)
-   - Supports: ground (pavement), ground_grass, wall, tree, bench
+Programmatic tile sprite rendering, 3 NPCs, typewriter dialogue effect, interaction prompt animation.
 
-2. **Map variety and design**
-   - Mixed ground types: green grass + gray pavement
-   - Pavement creates crossroad paths (horizontal + vertical)
-   - Strategic building and prop placement
-   - More organic, game-like layout
+### Iteration 4 — Indiranagar Rework
+**Status:** ✅ Complete (2026-02-13)
 
-3. **3 NPCs with dialogue**
-   - Alex: Freelancer with expense tracking problem
-   - Jordan: Researcher with note-sharing problem
-   - Maya: Bakery owner with e-commerce problem
+Major overhaul to make the game look and feel like Indiranagar, Bangalore:
 
-4. **Dialogue improvements**
-   - Typewriter effect (character-by-character text)
-   - Configurable typing speed (0.03s per character)
-   - Press C/Enter to skip typing or advance line
+1. **Map redesign** — 200x150 generic grid → 60x50 Indiranagar street layout
+   - Authentic road grid: 100 Feet Road, CMH Road, 12th Main, 80 Feet Road, numbered crosses/mains
+   - Zone-based building placement (commercial brick, residential wood)
+   - 3 hand-placed parks with fountains, benches, trees
+   - Tree-lined streets on both sides of every road
+   - Border walls
 
-5. **Interaction prompt animation**
-   - Gentle bouncing animation (sine wave)
-   - Resets when prompt appears
-   - Makes prompt more noticeable and polished
+2. **Tile size 32→320** — 10x larger sprites for HD-2D quality
 
-**Acceptance criteria:**
-- [x] Tile sprites render in game (ground, grass, walls, props)
-- [x] Map has visual variety (multiple ground types)
-- [x] At least 3 NPCs with distinct problems
-- [x] Dialogue has typewriter effect
-- [x] Interaction prompt is animated
-- [x] All sprites scaled correctly (32×32 display)
-- [x] Z-index layering works (tiles behind characters)
+3. **5 NPCs** — Added Sam (barber) and Priya (teacher) to Alex, Jordan, Maya
 
-**Files modified:**
-- `scripts/world.gd` - Added tile rendering, typewriter effect, prompt animation
-- `scripts/npc.gd` - Enhanced NPC sprite loading
-- `scenes/world.tscn` - Added TileSet resource reference
-- `resources/tiles.tres` - Created (basic TileSet)
+4. **Camera zoom** — Trackpad pinch, mouse wheel, Cmd+/- with smooth interpolation
 
-**Known issues:**
-- Maya NPC needs sprite generation (`npc_maya.png`)
-- TileSet resource exists but not fully configured for editor use
-- Current implementation uses programmatic sprite rendering (not TileMap node)
+5. **Movement speed scaling** — Faster movement when zoomed out
 
----
+6. **Sprite generation overhaul** (`startup-game-tools/generate_sprites.py`)
+   - Dual-engine: Imagen 4 for tiles/props, Gemini Flash for characters
+   - Indiranagar visual theme: laterite soil, rain trees, ashoka trees, bougainvillea, marigolds, compound walls, Indian post boxes, green dustbins
+   - Indian characters: brown skin, kurta, salwar kameez, saree
+   - Magenta background removal for transparency
 
-### Full Implementation
+7. **NPC spawn safety** — `_find_nearest_walkable()` ensures NPCs/player never spawn inside buildings
 
-**Step 1 — Tile map system**
-- Define a tile map data structure (2D array of tile types)
-- Load or define the map layout (hardcoded is fine for v0.1)
-- Render tiles with placeholder sprites or colored tiles
-- Define tile types: ground (walkable), wall (blocking), NPC (blocking), prop (blocking)
+## Sprite Generation
 
-**Step 2 — Player movement**
-- Player entity with grid position (x, y)
-- Keyboard input handler (arrow keys + WASD)
-- Move one tile per keypress in the input direction
-- Collision check before moving: reject move if target tile is blocking
-- Smooth visual transition between tiles (lerp/tween over ~100–150ms)
+Located at `../startup-game-tools/generate_sprites.py`. Run with `uv run python generate_sprites.py`.
 
-**Step 3 — Camera**
-- Camera follows the player, centered on their position
-- Slight top-down tilt for 2.5D feel (achieved through sprite art and layering, not 3D projection)
-- Sprite draw order: sort by Y position so objects lower on screen render on top
-- Objects "above" the player (trees, building tops) overlap the player sprite
+**Dual engine approach:**
+- **Imagen 4** (`imagen-4.0-generate-001`) — tiles and props (via `generate_images` API)
+- **Gemini Flash** (`gemini-2.5-flash-image`) — characters (via `generate_content` API, handles people better)
 
-**Step 4 — NPC placement and adjacency**
-- NPCs defined as entities with: name, grid position, dialogue array
-- NPCs placed at hardcoded map positions
-- Adjacency detection: check if player is exactly 1 tile away (cardinal directions only) from an NPC
-- When adjacent, show interaction prompt ("Press C to chat")
+**Style conventions:**
+- Ground/building tiles: `top-down view, tileable seamless pattern`
+- Props: `Stardew Valley style, front-facing with slight top-down angle, solid flat bright magenta background`
+- Characters: `Stardew Valley style, standing pose facing forward, full body, solid flat bright magenta background`
+- All prompts include: `no text, no numbers, no labels, no watermarks`
 
-**Step 5 — Dialogue system**
-- Dialogue overlay UI: a box at the bottom of the screen (RPG-style)
-- Shows NPC name and current dialogue line
-- Advance to next line on keypress (C or Enter)
-- Close overlay after last line
-- While dialogue is open, player movement is disabled
+## Code Index
 
-**Step 6 — Content: NPCs and their problems**
-- 3–5 NPCs, each with a name and a dialogue sequence
-- Each dialogue naturally surfaces a problem (a pain point with a digital product or a real-world inefficiency)
-- Problems should feel grounded and realistic — the kind of thing a real person would complain about
-
-Example NPCs (placeholder — final content TBD):
-
-| NPC | Location hint | Problem |
-|---|---|---|
-| Alex | Near coffee shop | Frustrated with expense tracking apps that are too complex for freelancers |
-| Jordan | Outside library | Can't find a good way to organize and share research notes with a team |
-| Sam | Sitting on bench | Local small businesses have no easy way to set up online ordering |
-
-**Step 7 — Polish (only if core is solid)**
-- Player sprite (simple character, 4 directional frames)
-- NPC sprites (distinct characters)
-- Tile sprites (grass, path, building walls, trees)
-- Interaction prompt animation (subtle bounce or fade-in)
-- Dialogue text typewriter effect (characters appear one by one)
+| File | Purpose |
+|---|---|
+| `scripts/world.gd` | Map generation, tile rendering, player/NPC spawning, dialogue, camera zoom, movement |
+| `scripts/player.gd` | Grid-based movement with tween animation |
+| `scripts/npc.gd` | NPC setup, sprite loading, dynamic scaling |
+| `scenes/world.tscn` | Main game scene (Camera2D, TileMapLayer, CanvasLayer with dialogue UI) |
+| `scenes/player.tscn` | Player scene (Sprite2D, scale 0.3125) |
+| `scenes/npc.tscn` | NPC scene template |
+| `assets/tiles/*.png` | 19 tile/prop sprites (1024x1024, scaled to 320x320 in game) |
+| `assets/characters/*.png` | 6 character sprites (player + 5 NPCs) |
 
 ## Deferred / Cut
 
 | Item | Reason | Where it lives |
 |---|---|---|
-| Problem journal (collecting problems) | That's v0.2's core mechanic | v0.2 roadmap |
-| Problem selection / company founding | v0.2 | v0.2 roadmap |
-| NPC walking or pathfinding | Not needed — NPCs are stationary | Maybe v2+ |
+| Problem journal | v0.2 core mechanic | v0.2 roadmap |
+| Company founding | v0.2 | v0.2 roadmap |
+| NPC walking/pathfinding | Not needed — stationary NPCs | Maybe v2+ |
 | Multiple map zones | One zone is enough for v0.1 | Later versions |
 | Building interiors | v0.5 mechanic | v0.5 roadmap |
 | Day/night cycle | v0.3 mechanic | v0.3 roadmap |
-| Sound effects | Polish, not core | Later |
 | Save/load | v0.3 mechanic | v0.3 roadmap |
-| Branching dialogue or choices | Not needed — linear dialogue only | Maybe v0.2+ |
-| NPC memory (remembering past conversations) | Design brief mentions it but it's not v0.1 | v1.0 roadmap |
-| Animated NPC idle behavior | Polish, not core | Later |
-
-## Game Data
-
-```
-// Tile types
-GROUND = 0   // walkable
-WALL = 1     // blocking (buildings, fences)
-PROP = 2     // blocking (trees, benches, lamp posts)
-
-// Map: 2D array of tile type integers
-// NPC positions stored separately (they occupy ground tiles but block movement)
-
-// NPC structure
-{
-  id: string,
-  name: string,
-  position: { x: number, y: number },
-  dialogue: string[],          // ordered lines of text
-  problem: {
-    description: string,       // one-line summary of the problem
-    category: string           // e.g., "productivity", "local-business", "education"
-  }
-}
-
-// Player structure
-{
-  position: { x: number, y: number },
-  facing: "up" | "down" | "left" | "right"
-}
-```
-
-## Dependencies
-
-- **Uses**: None (this is the foundation — first thing built)
-- **Used by**: v0.2 (The Idea) builds on this map, movement, and NPC system. Every subsequent version builds on these systems.
+| Branching dialogue | Not needed — linear only | Maybe v0.2+ |
+| 4-directional player sprites | Only left/right flip currently | Polish pass |
+| Sound effects | Not core | Later |
 
 ## Acceptance Criteria (Full v0.1)
 
-- [x] A single-zone tile map renders with ground, walls, and props
-- [x] Player moves tile-by-tile with arrow keys or WASD
+- [x] Tile map renders with ground, walls, props, and tree-lined streets
+- [x] Player moves tile-by-tile with arrow keys
 - [x] Collision prevents walking through walls, props, and NPCs
 - [x] Smooth visual movement between tiles (tween, 0.15s per tile)
-- [x] Camera follows the player (Camera2D with position smoothing)
-- [x] Sprite layering gives depth feel (y_sort_enabled, z-index on tiles)
-- [x] 3 NPCs visible on the map at fixed positions (Alex, Jordan, Maya)
+- [x] Camera follows the player with zoom controls
+- [x] Sprite layering gives depth feel (y_sort_enabled, z-index)
+- [x] 5 NPCs visible on the map at road positions
 - [x] Walking adjacent to an NPC shows an animated interaction prompt
 - [x] Pressing C while adjacent opens a dialogue overlay
 - [x] Dialogue shows NPC name and text with typewriter effect
 - [x] Each NPC's dialogue surfaces a distinct, realistic startup problem
 - [x] Dialogue closes after the last line and returns control to the player
-- [x] The game runs (Godot desktop, exportable to web)
-- [ ] 2.5D perspective — currently flat top-down, needs depth/angle feel
-
-## Status
-
-- [x] Iteration 0 complete (2026-02-12, commit c56ea86)
-- [x] Iteration 1 complete (2026-02-12)
-- [x] Iteration 2 complete (spread across later iterations + commit 7c0092d)
-- [x] Iteration 3 complete (2026-02-12)
-- [ ] 2.5D perspective (flat top-down → needs depth/angle feel)
-- [ ] 4-directional player sprites (only left/right flip currently)
-- [ ] Maya NPC sprite (`npc_maya.png` missing)
-- [ ] Playtested (full playthrough)
-- [ ] Doc finalized with code index
+- [x] Map resembles Indiranagar, Bangalore (road grid, tree-lined streets, parks)
+- [x] Visual theme reflects Indian neighborhood (laterite soil, tropical trees, Indian characters)
+- [x] The game runs in Godot
 
 ## Changes
 
 - 2026-02-12: Initial documentation (pre-build)
-- 2026-02-12: Iteration 0 complete - colored grid prototype with movement, collision, adjacency, and dialogue
-- 2026-02-12: Added iteration 1 specification - visual foundation with TileMap and sprites
-- 2026-02-12: Iteration 1 complete - player and NPC sprites working with proper scene structure
-- 2026-02-12: Iteration 3 complete - tile sprites, map variety, 3 NPCs, typewriter effect, prompt animation (iteration 2 skipped)
+- 2026-02-12: Iteration 0 complete — colored grid prototype
+- 2026-02-12: Iteration 1 complete — visual foundation with sprites
+- 2026-02-12: Iteration 2 complete — smooth movement, camera follow
+- 2026-02-12: Iteration 3 complete — tile sprites, 3 NPCs, typewriter effect
+- 2026-02-13: Iteration 4 complete — Indiranagar rework (60x50 map, 5 NPCs, 19 tile types, zoom controls, movement scaling, Bangalore-themed sprites, dual-engine sprite generation)
