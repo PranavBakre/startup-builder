@@ -13,6 +13,9 @@ const TILE_SIZE = 32
 
 func _ready():
 	update_world_position()
+	# Y-sort based on position
+	z_index = 0
+	y_sort_enabled = true
 
 func setup(data: Dictionary):
 	npc_id = data.get("id", "")
@@ -35,7 +38,8 @@ func setup(data: Dictionary):
 	update_world_position()
 
 func update_world_position():
-	position = Vector2(grid_pos.x * TILE_SIZE, grid_pos.y * TILE_SIZE)
+	# Center sprite on tile (sprites are centered by default)
+	position = Vector2(grid_pos.x * TILE_SIZE + TILE_SIZE/2, grid_pos.y * TILE_SIZE + TILE_SIZE/2)
 
 func get_grid_position() -> Vector2i:
 	return grid_pos

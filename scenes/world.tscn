@@ -4,7 +4,11 @@
 [ext_resource type="TileSet" path="res://resources/tiles.tres" id="2_tileset"]
 
 [node name="World" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_world")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+enabled = true
 
 [node name="TileMapLayer" type="TileMapLayer" parent="."]
 tile_set = ExtResource("2_tileset")

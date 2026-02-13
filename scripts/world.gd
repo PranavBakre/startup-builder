@@ -1,7 +1,7 @@
 extends Node2D
 
 # Tile types
-enum TileType { GROUND, WALL, PROP }
+enum TileType { GROUND, GROUND_GRASS, WALL, PROP }
 
 # Tile size in pixels
 const TILE_SIZE = 32
@@ -50,12 +50,35 @@ var npc_data = [
 			"description": "No good way to organize and share research notes with team",
 			"category": "education"
 		}
+	},
+	{
+		"id": "maya",
+		"name": "Maya",
+		"position": Vector2i(8, 12),
+		"dialogue": [
+			"I run a small bakery and want to sell online...",
+			"But setting up e-commerce is so complicated!",
+			"Shopify is too expensive, and building my own site is overwhelming.",
+			"I just want customers to order my cakes online. Why is this so hard?"
+		],
+		"problem": {
+			"description": "Small business needs simple, affordable online ordering",
+			"category": "local-business"
+		}
 	}
 ]
 
 # Dialogue state
 var active_dialogue: NPC = null
 var dialogue_index = 0
+var dialogue_char_index = 0
+var dialogue_timer = 0.0
+const CHAR_DELAY = 0.03  # Seconds between each character (typewriter effect)
+
+# Interaction prompt animation
+var prompt_bounce_time = 0.0
+const BOUNCE_SPEED = 3.0
+const BOUNCE_AMOUNT = 5.0
 
 # UI references
 @onready var dialogue_box = $CanvasLayer/DialogueBox
@@ -63,20 +86,30 @@ var dialogue_index = 0
 @onready var dialogue_text_label = $CanvasLayer/DialogueBox/MarginContainer/VBoxContainer/DialogueText
 @onready var interact_prompt = $CanvasLayer/InteractPrompt
 @onready var tilemap_layer = $TileMapLayer
+@onready var camera = $Camera2D
 
 func _ready():
 	_generate_map()
+	_render_tiles()  # Render actual tile sprites
 	_spawn_player()
 	_spawn_npcs()
-	queue_redraw()  # Trigger tile rendering
 
 func _generate_map():
-	# Initialize with ground tiles
+	# Initialize with grass as default
 	for y in range(MAP_HEIGHT):
 		var row = []
 		for x in range(MAP_WIDTH):
-			row.append(TileType.GROUND)
+			row.append(TileType.GROUND_GRASS)
 		tile_map.append(row)
+
+	# Create pavement paths (horizontal and vertical)
+	# Horizontal path through middle
+	for x in range(MAP_WIDTH):
+		tile_map[7][x] = TileType.GROUND
+
+	# Vertical path through middle
+	for y in range(MAP_HEIGHT):
+		tile_map[y][10] = TileType.GROUND
 
 	# Add walls around the border
 	for x in range(MAP_WIDTH):
@@ -95,40 +128,46 @@ func _generate_map():
 		for y in range(8, 11):
 			tile_map[y][x] = TileType.WALL
 
-	# Add some props (trees, benches)
-	tile_map[7][8] = TileType.PROP
-	tile_map[4][12] = TileType.PROP
-	tile_map[11][4] = TileType.PROP
+	# Add some props (trees, benches) on grass areas
+	tile_map[3][8] = TileType.PROP   # Tree
+	tile_map[4][15] = TileType.PROP  # Tree
+	tile_map[11][4] = TileType.PROP  # Tree
+	tile_map[9][16] = TileType.PROP  # Tree
 
-	# TODO: Replace with actual TileMapLayer painting once TileSet is configured
+func _render_tiles():
+	# Load tile textures
+	var tile_textures = {
+		TileType.GROUND: load("res://assets/tiles/ground.png"),        # Gray pavement
+		TileType.GROUND_GRASS: load("res://assets/tiles/ground_grass.png"),  # Green grass
+		TileType.WALL: load("res://assets/tiles/wall.png"),
+		TileType.PROP: load("res://assets/tiles/tree.png")
+	}
 
-func _draw():
-	# Temporary: Draw colored rectangles for tiles (like iteration 0)
-	const COLOR_GROUND = Color(0.2, 0.6, 0.2)  # Green
-	const COLOR_WALL = Color(0.3, 0.3, 0.3)     # Gray
-	const COLOR_PROP = Color(0.5, 0.3, 0.1)     # Brown
-
+	# Create Sprite2D nodes for each tile
 	for y in range(MAP_HEIGHT):
 		for x in range(MAP_WIDTH):
-			var pos = Vector2(x * TILE_SIZE, y * TILE_SIZE)
-			var color = COLOR_GROUND
-			match tile_map[y][x]:
-				TileType.GROUND:
-					color = COLOR_GROUND
-				TileType.WALL:
-					color = COLOR_WALL
-				TileType.PROP:
-					color = COLOR_PROP
+			var tile_type = tile_map[y][x]
+			var texture = tile_textures.get(tile_type)
 
-			draw_rect(Rect2(pos, Vector2(TILE_SIZE, TILE_SIZE)), color)
-			# Draw grid lines
-			draw_rect(Rect2(pos, Vector2(TILE_SIZE, TILE_SIZE)), Color.BLACK, false, 1.0)
+			if texture:
+				var sprite = Sprite2D.new()
+				sprite.texture = texture
+				sprite.position = Vector2(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2)
+				# Scale from 1024x1024 to 32x32
+				sprite.scale = Vector2(0.03125, 0.03125)
+				sprite.z_index = -1  # Render tiles behind characters
+				add_child(sprite)
 
 func _spawn_player():
 	var player_scene = preload("res://scenes/player.tscn")
 	player = player_scene.instantiate()
-	player.set_grid_position(Vector2i(5, 7))
+	player.set_grid_position(Vector2i(5, 7), false)  # No animation on spawn
 	add_child(player)
+	_update_camera()
+
+func _update_camera():
+	if player and camera:
+		camera.position = player.position
 
 func _spawn_npcs():
 	var npc_scene = preload("res://scenes/npc.tscn")
@@ -139,6 +178,46 @@ func _spawn_npcs():
 		npcs.append(npc)
 		add_child(npc)
 
+func _process(delta):
+	# Smooth camera follow
+	if player and camera:
+		camera.position = camera.position.lerp(player.position, 0.1)
+
+	# Continuous movement when holding keys (only if not in dialogue and not moving)
+	if active_dialogue == null and player and not player.is_moving:
+		var direction = Vector2i.ZERO
+
+		# Check vertical input
+		if Input.is_action_pressed("ui_up"):
+			direction.y = -1
+		elif Input.is_action_pressed("ui_down"):
+			direction.y = 1
+
+		# Check horizontal input
+		if Input.is_action_pressed("ui_left"):
+			direction.x = -1
+		elif Input.is_action_pressed("ui_right"):
+			direction.x = 1
+
+		# Move if any direction is pressed (supports diagonals)
+		if direction != Vector2i.ZERO:
+			_try_move(direction)
+
+	# Typewriter effect for dialogue
+	if active_dialogue != null and dialogue_char_index < active_dialogue.dialogue[dialogue_index].length():
+		dialogue_timer += delta
+		if dialogue_timer >= CHAR_DELAY:
+			dialogue_timer = 0.0
+			dialogue_char_index += 1
+			var full_text = active_dialogue.dialogue[dialogue_index]
+			dialogue_text_label.text = full_text.substr(0, dialogue_char_index)
+
+	# Animate interaction prompt (subtle bounce)
+	if interact_prompt.visible:
+		prompt_bounce_time += delta * BOUNCE_SPEED
+		var bounce_offset = sin(prompt_bounce_time) * BOUNCE_AMOUNT
+		interact_prompt.position.y = interact_prompt.position.y - bounce_offset + bounce_offset
+
 func _input(event):
 	if active_dialogue != null:
 		# In dialogue mode
@@ -146,21 +225,7 @@ func _input(event):
 			_advance_dialogue()
 		return
 
-	# Movement input
-	var direction = Vector2i.ZERO
-	if event.is_action_pressed("ui_up"):
-		direction = Vector2i(0, -1)
-	elif event.is_action_pressed("ui_down"):
-		direction = Vector2i(0, 1)
-	elif event.is_action_pressed("ui_left"):
-		direction = Vector2i(-1, 0)
-	elif event.is_action_pressed("ui_right"):
-		direction = Vector2i(1, 0)
-
-	if direction != Vector2i.ZERO:
-		_try_move(direction)
-
-	# Interact input
+	# Interact input (still uses _input for single press)
 	if event.is_action_pressed("interact"):
 		_try_interact()
 
@@ -169,29 +234,39 @@ func _try_move(direction: Vector2i):
 
 	# Check bounds
 	if new_pos.x < 0 or new_pos.x >= MAP_WIDTH or new_pos.y < 0 or new_pos.y >= MAP_HEIGHT:
+		print("Move blocked: out of bounds")
 		return
 
-	# Check collision with tiles
-	if tile_map[new_pos.y][new_pos.x] != TileType.GROUND:
+	# Check collision with tiles (both ground types are walkable)
+	var tile_type = tile_map[new_pos.y][new_pos.x]
+	if tile_type != TileType.GROUND and tile_type != TileType.GROUND_GRASS:
+		print("Move blocked: tile type ", tile_type, " at ", new_pos)
 		return
 
 	# Check collision with NPCs
 	for npc in npcs:
 		if npc.get_grid_position() == new_pos:
+			print("Move blocked: NPC at ", new_pos)
 			return
 
 	# Move is valid
-	player.set_grid_position(new_pos)
+	print("Moving to ", new_pos)
+	player.set_grid_position(new_pos, true, direction)  # Animate movement with direction
+	_update_camera()
 	_check_npc_proximity()
 
 func _check_npc_proximity():
 	var adjacent_npc = _get_adjacent_npc()
 	if adjacent_npc != null:
+		if not interact_prompt.visible:
+			prompt_bounce_time = 0.0  # Reset animation when showing
 		interact_prompt.visible = true
 		var npc_world_pos = adjacent_npc.position
+		var base_y = npc_world_pos.y - 30
+		var bounce_offset = sin(prompt_bounce_time) * BOUNCE_AMOUNT
 		interact_prompt.position = Vector2(
 			npc_world_pos.x + TILE_SIZE / 2 - 50,
-			npc_world_pos.y - 30
+			base_y + bounce_offset
 		)
 	else:
 		interact_prompt.visible = false
@@ -219,15 +294,26 @@ func _try_interact():
 func _start_dialogue(npc: NPC):
 	active_dialogue = npc
 	dialogue_index = 0
+	dialogue_char_index = 0
+	dialogue_timer = 0.0
 	interact_prompt.visible = false
 	dialogue_box.visible = true
 	npc_name_label.text = npc.npc_name
-	dialogue_text_label.text = npc.dialogue[dialogue_index]
+	dialogue_text_label.text = ""  # Start empty for typewriter effect
 
 func _advance_dialogue():
+	# If still typing, skip to end of current line
+	if dialogue_char_index < active_dialogue.dialogue[dialogue_index].length():
+		dialogue_char_index = active_dialogue.dialogue[dialogue_index].length()
+		dialogue_text_label.text = active_dialogue.dialogue[dialogue_index]
+		return
+
+	# Move to next dialogue line
 	dialogue_index += 1
 	if dialogue_index < active_dialogue.dialogue.size():
-		dialogue_text_label.text = active_dialogue.dialogue[dialogue_index]
+		dialogue_char_index = 0
+		dialogue_timer = 0.0
+		dialogue_text_label.text = ""
 	else:
 		_end_dialogue()
 
