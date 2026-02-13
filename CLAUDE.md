@@ -8,9 +8,9 @@ Startup Simulator is an HD-2D top-down game where the player builds a digital pr
 **Visual Style:** HD-2D — 2D sprites with real-time 3D lighting, shadows, depth of field, and atmospheric effects.
 **Platforms:** Desktop + Mobile (virtual joystick on mobile, keyboard on desktop)
 
-**Status:** Pre-development (design phase)
-**Tech Stack:** Godot (strong frontrunner, pending prototype validation)
-**Current Target:** v0.1
+**Status:** v0.1 complete, building v0.2
+**Tech Stack:** Godot 4
+**Current Target:** v0.2
 
 ## Documentation Index
 
