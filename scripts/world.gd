@@ -11,9 +11,9 @@ enum TileType {
 # Tile size in pixels
 const TILE_SIZE = 320
 
-# Map dimensions (10x original: was 20x15)
-const MAP_WIDTH = 200
-const MAP_HEIGHT = 150
+# Map dimensions — compact Indiranagar-inspired layout
+const MAP_WIDTH = 60
+const MAP_HEIGHT = 50
 
 # The map (2D array of tile types)
 var tile_map = []
@@ -27,12 +27,12 @@ var player: Player
 # NPCs list
 var npcs: Array[NPC] = []
 
-# NPC data — 5 NPCs with distinct problems
+# NPC data — 5 NPCs placed around Indiranagar-inspired map
 var npc_data = [
 	{
 		"id": "alex",
 		"name": "Alex",
-		"position": Vector2i(51, 41),  # Near park (northwest)
+		"position": Vector2i(25, 23),  # 100 Feet Road, near cafes
 		"dialogue": [
 			"Hey there! I'm a freelancer and I'm so frustrated...",
 			"Every expense tracking app I've tried is way too complex.",
@@ -47,7 +47,7 @@ var npc_data = [
 	{
 		"id": "jordan",
 		"name": "Jordan",
-		"position": Vector2i(131, 71),  # Near central park
+		"position": Vector2i(12, 33),  # Main road near Indiranagar Park
 		"dialogue": [
 			"I'm doing research for my thesis...",
 			"My team needs to share notes and references.",
@@ -62,7 +62,7 @@ var npc_data = [
 	{
 		"id": "maya",
 		"name": "Maya",
-		"position": Vector2i(41, 111),  # Near south park
+		"position": Vector2i(42, 16),  # On 12th Main, bakery area
 		"dialogue": [
 			"I run a small bakery and want to sell online...",
 			"But setting up e-commerce is so complicated!",
@@ -77,7 +77,7 @@ var npc_data = [
 	{
 		"id": "sam",
 		"name": "Sam",
-		"position": Vector2i(161, 91),  # Near east park
+		"position": Vector2i(50, 36),  # Road intersection, east side
 		"dialogue": [
 			"I run a barbershop down the street.",
 			"People keep calling to book appointments and I'm always cutting hair!",
@@ -92,7 +92,7 @@ var npc_data = [
 	{
 		"id": "priya",
 		"name": "Priya",
-		"position": Vector2i(86, 131),  # Near south-center park
+		"position": Vector2i(28, 46),  # Southern cross road, near school
 		"dialogue": [
 			"I'm a teacher at the school nearby.",
 			"Communicating with parents is a nightmare right now.",
@@ -119,11 +119,11 @@ const BOUNCE_SPEED = 3.0
 const BOUNCE_AMOUNT = 5.0
 
 # Camera zoom
-const ZOOM_MIN = 0.02
+const ZOOM_MIN = 0.05
 const ZOOM_MAX = 2.0
 const ZOOM_STEP = 0.05
 const ZOOM_SMOOTH_SPEED = 8.0
-var target_zoom = 0.3
+var target_zoom = 0.5
 
 # UI references
 @onready var dialogue_box = $CanvasLayer/DialogueBox
@@ -140,14 +140,8 @@ func _ready():
 	_spawn_npcs()
 
 func _generate_map():
-	# Seeded RNG for reproducible maps
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 42
-
-	# Wall type options for buildings
-	var wall_types = [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD]
-	# Tree type options
-	var tree_types = [TileType.TREE, TileType.TREE_PINE]
 
 	# Initialize with grass
 	for y in range(MAP_HEIGHT):
@@ -156,120 +150,209 @@ func _generate_map():
 			row.append(TileType.GROUND_GRASS)
 		tile_map.append(row)
 
-	# --- Major roads (2 tiles wide) ---
-	var h_roads = [25, 50, 75, 100, 125]
-	var v_roads = [30, 60, 100, 140, 170]
+	# ============================================================
+	# ROAD NETWORK — Indiranagar street grid
+	# ============================================================
+	# E-W: 100 Feet Road — THE main artery (2 tiles wide)
+	for x in range(MAP_WIDTH):
+		tile_map[23][x] = TileType.GROUND
+		tile_map[24][x] = TileType.GROUND
+	# E-W: 80 Feet Road — secondary artery
+	for x in range(MAP_WIDTH):
+		tile_map[40][x] = TileType.GROUND
+	# N-S: CMH Road — major north-south (2 tiles wide)
+	for y in range(MAP_HEIGHT):
+		tile_map[y][4] = TileType.GROUND
+		tile_map[y][5] = TileType.GROUND
+	# N-S: 12th Main — the famous cafe/commercial strip
+	for y in range(MAP_HEIGHT):
+		tile_map[y][42] = TileType.GROUND
+	# Cross streets (E-W, numbered, 1 tile each)
+	var cross_ys = [7, 14, 19, 30, 36, 46]
+	for ry in cross_ys:
+		for x in range(MAP_WIDTH):
+			tile_map[ry][x] = TileType.GROUND
+	# Main roads (N-S, numbered, 1 tile each)
+	var main_xs = [12, 20, 28, 35, 50, 56]
+	for rx in main_xs:
+		for y in range(MAP_HEIGHT):
+			tile_map[y][rx] = TileType.GROUND
 
-	for ry in h_roads:
-		if ry + 1 < MAP_HEIGHT:
-			for x in range(MAP_WIDTH):
-				tile_map[ry][x] = TileType.GROUND
-				tile_map[ry + 1][x] = TileType.GROUND
-
-	for rx in v_roads:
-		if rx + 1 < MAP_WIDTH:
-			for y in range(MAP_HEIGHT):
-				tile_map[y][rx] = TileType.GROUND
-				tile_map[y][rx + 1] = TileType.GROUND
-
-	# --- Border walls ---
+	# Border walls
 	for x in range(MAP_WIDTH):
 		tile_map[0][x] = TileType.WALL
-		tile_map[MAP_HEIGHT - 1][x] = TileType.WALL
+		tile_map[49][x] = TileType.WALL
 	for y in range(MAP_HEIGHT):
 		tile_map[y][0] = TileType.WALL
-		tile_map[y][MAP_WIDTH - 1] = TileType.WALL
+		tile_map[y][59] = TileType.WALL
 
-	# --- Buildings FIRST (before minor roads so they don't block placement) ---
-	for bi in range(len(h_roads) + 1):
-		var y_start = 3 if bi == 0 else h_roads[bi - 1] + 3
-		var y_end = (h_roads[bi] - 2) if bi < len(h_roads) else MAP_HEIGHT - 3
-		for bj in range(len(v_roads) + 1):
-			var x_start = 3 if bj == 0 else v_roads[bj - 1] + 3
-			var x_end = (v_roads[bj] - 2) if bj < len(v_roads) else MAP_WIDTH - 3
-			var block_w = x_end - x_start
-			var block_h = y_end - y_start
-			if block_w < 12 or block_h < 10:
+	# ============================================================
+	# BUILDINGS — zone-based placement in city blocks
+	# ============================================================
+	# City blocks: grass rectangles between road lines
+	var x_blocks = [
+		[1, 3], [6, 11], [13, 19], [21, 27],
+		[29, 34], [36, 41], [43, 49], [51, 55], [57, 58]
+	]
+	var y_blocks = [
+		[1, 6], [8, 13], [15, 18], [20, 22],
+		[25, 29], [31, 35], [37, 39], [41, 45], [47, 48]
+	]
+
+	# Blocks reserved for parks (exact match with x_blocks/y_blocks entries)
+	var park_block_keys = [
+		Vector4i(6, 11, 31, 35),   # Indiranagar Park
+		Vector4i(51, 55, 41, 45),  # Defence Colony Playground
+		Vector4i(6, 11, 8, 13)     # BDA Complex green / Metro area
+	]
+
+	for xr in x_blocks:
+		for yr in y_blocks:
+			var block_w = xr[1] - xr[0] + 1
+			var block_h = yr[1] - yr[0] + 1
+			if block_w < 3 or block_h < 3:
 				continue
-			# 1-2 large buildings per block
-			var num_buildings = rng.randi_range(1, 2)
-			for _b in range(num_buildings):
-				var bw = rng.randi_range(8, min(16, block_w - 6))
-				var bh = rng.randi_range(6, min(12, block_h - 6))
-				if bw < 4 or bh < 4:
-					continue
-				var bx = rng.randi_range(x_start + 2, max(x_start + 2, x_end - bw - 2))
-				var by = rng.randi_range(y_start + 2, max(y_start + 2, y_end - bh - 2))
-				# Check area is only grass (no overlap with roads or other buildings)
-				var can_place = true
-				for cy in range(by - 1, by + bh + 1):
-					for cx in range(bx - 1, bx + bw + 1):
-						if cy < 0 or cy >= MAP_HEIGHT or cx < 0 or cx >= MAP_WIDTH:
-							can_place = false
-							break
-						if tile_map[cy][cx] != TileType.GROUND_GRASS:
-							can_place = false
-							break
-					if not can_place:
+
+			# Skip park blocks
+			var is_park = false
+			for pk in park_block_keys:
+				if xr[0] == pk.x and xr[1] == pk.y and yr[0] == pk.z and yr[1] == pk.w:
+					is_park = true
+					break
+			if is_park:
+				continue
+
+			# Zone: commercial near 100ft Road or 12th Main
+			var is_commercial = false
+			if yr[0] >= 20 and yr[1] <= 29:
+				is_commercial = true
+			if xr[0] >= 36 and xr[1] <= 49:
+				is_commercial = true
+
+			# Wall type by zone
+			var wt
+			if is_commercial:
+				wt = TileType.WALL_BRICK if rng.randf() < 0.7 else TileType.WALL
+			else:
+				wt = TileType.WALL_WOOD if rng.randf() < 0.6 else TileType.WALL_BRICK
+
+			# Building fills most of block (1 tile grass buffer)
+			var bw = maxi(2, block_w - rng.randi_range(1, 2))
+			var bh = maxi(2, block_h - rng.randi_range(1, 2))
+			var bx = xr[0] + rng.randi_range(0, maxi(0, block_w - bw))
+			var by = yr[0] + rng.randi_range(0, maxi(0, block_h - bh))
+
+			# Verify all tiles are grass
+			var can_place = true
+			for cy in range(by, by + bh):
+				for cx in range(bx, bx + bw):
+					if cx >= MAP_WIDTH or cy >= MAP_HEIGHT:
+						can_place = false
 						break
-				if can_place:
-					var wt = wall_types[rng.randi_range(0, wall_types.size() - 1)]
-					# Mark all tiles as wall (for collision)
-					for cy in range(by, by + bh):
-						for cx in range(bx, bx + bw):
-							tile_map[cy][cx] = wt
-					# Store building rect for single-sprite rendering
-					buildings.append({"x": bx, "y": by, "w": bw, "h": bh, "wall_type": wt})
+					if tile_map[cy][cx] != TileType.GROUND_GRASS:
+						can_place = false
+						break
+				if not can_place:
+					break
+			if can_place:
+				for cy in range(by, by + bh):
+					for cx in range(bx, bx + bw):
+						tile_map[cy][cx] = wt
+				buildings.append({"x": bx, "y": by, "w": bw, "h": bh, "wall_type": wt})
 
-	# --- Minor roads AFTER buildings ---
-	var minor_h = [12, 37, 63, 88, 112, 138]
-	for ry in minor_h:
-		if ry < MAP_HEIGHT:
-			for x in range(MAP_WIDTH):
-				if tile_map[ry][x] == TileType.GROUND_GRASS:
-					tile_map[ry][x] = TileType.GROUND
+	# ============================================================
+	# PARKS — hand-placed Indiranagar landmarks
+	# ============================================================
+	# Park 1: Indiranagar Park (block x=6-11, y=31-35)
+	var p1 = Vector2i(8, 33)
+	tile_map[p1.y][p1.x] = TileType.FOUNTAIN
+	for pos in [Vector2i(7, 32), Vector2i(9, 34)]:
+		if tile_map[pos.y][pos.x] == TileType.GROUND_GRASS:
+			tile_map[pos.y][pos.x] = TileType.BENCH
+	for pos in [Vector2i(10, 32), Vector2i(7, 34), Vector2i(9, 31)]:
+		if tile_map[pos.y][pos.x] == TileType.GROUND_GRASS:
+			tile_map[pos.y][pos.x] = TileType.FLOWERS
+	for _t in range(6):
+		var px = p1.x + rng.randi_range(-2, 2)
+		var py = p1.y + rng.randi_range(-2, 2)
+		if px >= 6 and px <= 11 and py >= 31 and py <= 35:
+			if tile_map[py][px] == TileType.GROUND_GRASS:
+				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
-	var minor_v = [15, 45, 80, 120, 155, 185]
-	for rx in minor_v:
-		if rx < MAP_WIDTH:
-			for y in range(MAP_HEIGHT):
-				if tile_map[y][rx] == TileType.GROUND_GRASS:
-					tile_map[y][rx] = TileType.GROUND
+	# Park 2: Defence Colony Playground (block x=51-55, y=41-45)
+	var p2 = Vector2i(53, 43)
+	tile_map[p2.y][p2.x] = TileType.FOUNTAIN
+	if tile_map[42][52] == TileType.GROUND_GRASS:
+		tile_map[42][52] = TileType.BENCH
+	if tile_map[44][54] == TileType.GROUND_GRASS:
+		tile_map[44][54] = TileType.FLOWERS
+	for _t in range(4):
+		var px = p2.x + rng.randi_range(-2, 2)
+		var py = p2.y + rng.randi_range(-2, 2)
+		if px >= 51 and px <= 55 and py >= 41 and py <= 45:
+			if tile_map[py][px] == TileType.GROUND_GRASS:
+				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
-	# Dirt paths branching off roads
-	for _i in range(30):
-		var start_x = rng.randi_range(5, MAP_WIDTH - 5)
-		var start_y = rng.randi_range(5, MAP_HEIGHT - 5)
-		if tile_map[start_y][start_x] == TileType.GROUND:
-			var dx = rng.randi_range(-1, 1)
-			var dy = 1 if dx == 0 else 0
-			var cx = start_x
-			var cy = start_y
-			var path_len = rng.randi_range(5, 15)
-			for _s in range(path_len):
-				cx += dx
-				cy += dy
-				if cx > 1 and cx < MAP_WIDTH - 2 and cy > 1 and cy < MAP_HEIGHT - 2:
-					if tile_map[cy][cx] == TileType.GROUND_GRASS:
-						tile_map[cy][cx] = TileType.GROUND_DIRT
+	# Park 3: BDA Complex / Metro green (block x=6-11, y=8-13)
+	var p3 = Vector2i(8, 10)
+	tile_map[p3.y][p3.x] = TileType.FOUNTAIN
+	if tile_map[9][7] == TileType.GROUND_GRASS:
+		tile_map[9][7] = TileType.BENCH
+	if tile_map[11][10] == TileType.GROUND_GRASS:
+		tile_map[11][10] = TileType.FLOWERS
+	for _t in range(5):
+		var px = p3.x + rng.randi_range(-2, 2)
+		var py = p3.y + rng.randi_range(-2, 2)
+		if px >= 6 and px <= 11 and py >= 8 and py <= 13:
+			if tile_map[py][px] == TileType.GROUND_GRASS:
+				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
-	# --- Lamp posts along major roads ---
-	for ry in h_roads:
-		for x in range(5, MAP_WIDTH - 5, 8):
-			if ry - 1 > 0 and tile_map[ry - 1][x] == TileType.GROUND_GRASS:
-				tile_map[ry - 1][x] = TileType.LAMP_POST
-	for rx in v_roads:
-		for y in range(5, MAP_HEIGHT - 5, 8):
-			if rx - 1 > 0 and tile_map[y][rx - 1] == TileType.GROUND_GRASS:
-				tile_map[y][rx - 1] = TileType.LAMP_POST
+	# ============================================================
+	# TREE-LINED STREETS — Indiranagar's signature look
+	# ============================================================
+	# Major roads: trees + lamp posts alternating every 2 tiles
+	# 100 Feet Road — trees on y=22 (north) and y=25 (south)
+	for x in range(2, MAP_WIDTH - 2, 2):
+		var use_lamp = (x % 6 == 0)
+		var tt = TileType.LAMP_POST if use_lamp else (TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE)
+		if tile_map[22][x] == TileType.GROUND_GRASS:
+			tile_map[22][x] = tt
+		if tile_map[25][x] == TileType.GROUND_GRASS:
+			tile_map[25][x] = tt
 
-	# --- Street furniture along roads ---
-	for _i in range(40):
-		var fx = rng.randi_range(3, MAP_WIDTH - 4)
-		var fy = rng.randi_range(3, MAP_HEIGHT - 4)
+	# CMH Road — trees on x=3 (west) and x=6 (east)
+	for y in range(2, MAP_HEIGHT - 2, 2):
+		var use_lamp = (y % 6 == 0)
+		var tt = TileType.LAMP_POST if use_lamp else (TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE)
+		if tile_map[y][3] == TileType.GROUND_GRASS:
+			tile_map[y][3] = tt
+		if tile_map[y][6] == TileType.GROUND_GRASS:
+			tile_map[y][6] = tt
+
+	# All other roads: trees on both sides every 3 tiles
+	var all_ew_roads = [7, 14, 19, 30, 36, 40, 46]
+	for ry in all_ew_roads:
+		for x in range(2, MAP_WIDTH - 2, 3):
+			if ry > 1 and tile_map[ry - 1][x] == TileType.GROUND_GRASS:
+				tile_map[ry - 1][x] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+			if ry + 1 < MAP_HEIGHT - 1 and tile_map[ry + 1][x] == TileType.GROUND_GRASS:
+				tile_map[ry + 1][x] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+	var all_ns_roads = [12, 20, 28, 35, 42, 50, 56]
+	for rx in all_ns_roads:
+		for y in range(2, MAP_HEIGHT - 2, 3):
+			if rx > 1 and tile_map[y][rx - 1] == TileType.GROUND_GRASS:
+				tile_map[y][rx - 1] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+			if rx + 1 < MAP_WIDTH - 1 and tile_map[y][rx + 1] == TileType.GROUND_GRASS:
+				tile_map[y][rx + 1] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+
+	# ============================================================
+	# STREET FURNITURE — benches, trash cans, signs along roads
+	# ============================================================
+	for _i in range(25):
+		var fx = rng.randi_range(2, MAP_WIDTH - 3)
+		var fy = rng.randi_range(2, MAP_HEIGHT - 3)
 		if tile_map[fy][fx] != TileType.GROUND_GRASS:
 			continue
-		# Check if adjacent to a road
 		var next_to_road = false
 		for d in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
 			var nx = fx + d.x
@@ -282,83 +365,17 @@ func _generate_map():
 			var furniture = [TileType.TRASH_CAN, TileType.MAILBOX, TileType.SIGN_SHOP, TileType.BENCH]
 			tile_map[fy][fx] = furniture[rng.randi_range(0, furniture.size() - 1)]
 
-	# --- Park areas ---
-	var park_centers = [
-		Vector2i(50, 40), Vector2i(110, 35), Vector2i(160, 90),
-		Vector2i(40, 110), Vector2i(130, 70), Vector2i(85, 130),
-		Vector2i(170, 40), Vector2i(25, 70), Vector2i(90, 15),
-		Vector2i(150, 130)
-	]
-	for pc in park_centers:
-		var park_radius = rng.randi_range(5, 8)
-		# Clear area for park
-		for dy in range(-park_radius, park_radius + 1):
-			for dx in range(-park_radius, park_radius + 1):
-				var px = pc.x + dx
-				var py = pc.y + dy
-				if px > 1 and px < MAP_WIDTH - 2 and py > 1 and py < MAP_HEIGHT - 2:
-					if tile_map[py][px] in [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD, TileType.ROOF]:
-						tile_map[py][px] = TileType.GROUND_GRASS
-		# Fountain at center
-		if pc.x > 0 and pc.x < MAP_WIDTH - 1 and pc.y > 0 and pc.y < MAP_HEIGHT - 1:
-			if tile_map[pc.y][pc.x] == TileType.GROUND_GRASS:
-				tile_map[pc.y][pc.x] = TileType.FOUNTAIN
-		# Trees around edge
-		for _t in range(12):
-			var dx = rng.randi_range(-park_radius, park_radius)
-			var dy = rng.randi_range(-park_radius, park_radius)
-			var px = pc.x + dx
-			var py = pc.y + dy
-			if px > 1 and px < MAP_WIDTH - 2 and py > 1 and py < MAP_HEIGHT - 2:
-				if tile_map[py][px] == TileType.GROUND_GRASS:
-					tile_map[py][px] = tree_types[rng.randi_range(0, tree_types.size() - 1)]
-		# Benches
-		for _b in range(3):
-			var dx = rng.randi_range(-3, 3)
-			var dy = rng.randi_range(-3, 3)
-			var px = pc.x + dx
-			var py = pc.y + dy
-			if px > 1 and px < MAP_WIDTH - 2 and py > 1 and py < MAP_HEIGHT - 2:
-				if tile_map[py][px] == TileType.GROUND_GRASS:
-					tile_map[py][px] = TileType.BENCH
-		# Flowers near benches
-		for _f in range(4):
-			var dx = rng.randi_range(-park_radius, park_radius)
-			var dy = rng.randi_range(-park_radius, park_radius)
-			var px = pc.x + dx
-			var py = pc.y + dy
-			if px > 1 and px < MAP_WIDTH - 2 and py > 1 and py < MAP_HEIGHT - 2:
-				if tile_map[py][px] == TileType.GROUND_GRASS:
-					tile_map[py][px] = TileType.FLOWERS
-
-	# --- Scattered trees across open grass ---
-	for _i in range(600):
-		var tx = rng.randi_range(2, MAP_WIDTH - 3)
-		var ty = rng.randi_range(2, MAP_HEIGHT - 3)
-		if tile_map[ty][tx] != TileType.GROUND_GRASS:
-			continue
-		# Don't place adjacent to roads
-		var near_road = false
-		for dy in range(-1, 2):
-			for dx in range(-1, 2):
-				var nx = tx + dx
-				var ny = ty + dy
-				if nx >= 0 and nx < MAP_WIDTH and ny >= 0 and ny < MAP_HEIGHT:
-					if tile_map[ny][nx] == TileType.GROUND:
-						near_road = true
-		if not near_road:
-			tile_map[ty][tx] = tree_types[rng.randi_range(0, tree_types.size() - 1)]
-
-	# --- Bushes scattered in grass near trees ---
-	for _i in range(300):
+	# ============================================================
+	# VEGETATION — bushes, flowers, fences in remaining grass
+	# ============================================================
+	for _i in range(20):
 		var bx = rng.randi_range(2, MAP_WIDTH - 3)
 		var by = rng.randi_range(2, MAP_HEIGHT - 3)
 		if tile_map[by][bx] != TileType.GROUND_GRASS:
 			continue
-		# Prefer near existing trees
 		var near_tree = false
-		for dy in range(-2, 3):
-			for dx in range(-2, 3):
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
 				var nx = bx + dx
 				var ny = by + dy
 				if nx >= 0 and nx < MAP_WIDTH and ny >= 0 and ny < MAP_HEIGHT:
@@ -367,13 +384,17 @@ func _generate_map():
 		if near_tree:
 			tile_map[by][bx] = TileType.BUSH
 
-	# --- Fences around some buildings ---
-	for _i in range(20):
-		var fx = rng.randi_range(5, MAP_WIDTH - 5)
-		var fy = rng.randi_range(5, MAP_HEIGHT - 5)
+	for _i in range(10):
+		var fx = rng.randi_range(2, MAP_WIDTH - 3)
+		var fy = rng.randi_range(2, MAP_HEIGHT - 3)
+		if tile_map[fy][fx] == TileType.GROUND_GRASS:
+			tile_map[fy][fx] = TileType.FLOWERS
+
+	for _i in range(8):
+		var fx = rng.randi_range(2, MAP_WIDTH - 3)
+		var fy = rng.randi_range(2, MAP_HEIGHT - 3)
 		if tile_map[fy][fx] != TileType.GROUND_GRASS:
 			continue
-		# Check if near a building wall
 		var near_building = false
 		for d in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
 			var nx = fx + d.x
@@ -384,6 +405,22 @@ func _generate_map():
 					break
 		if near_building:
 			tile_map[fy][fx] = TileType.FENCE
+
+	# Dirt paths off roads
+	for _i in range(6):
+		var sx = rng.randi_range(3, MAP_WIDTH - 4)
+		var sy = rng.randi_range(3, MAP_HEIGHT - 4)
+		if tile_map[sy][sx] == TileType.GROUND:
+			var dx = rng.randi_range(-1, 1)
+			var dy = 1 if dx == 0 else 0
+			var cx = sx
+			var cy = sy
+			for _s in range(rng.randi_range(2, 4)):
+				cx += dx
+				cy += dy
+				if cx > 1 and cx < MAP_WIDTH - 2 and cy > 1 and cy < MAP_HEIGHT - 2:
+					if tile_map[cy][cx] == TileType.GROUND_GRASS:
+						tile_map[cy][cx] = TileType.GROUND_DIRT
 
 # Walkable tile types
 var walkable_tiles = [
@@ -483,8 +520,8 @@ func _render_tiles():
 func _spawn_player():
 	var player_scene = preload("res://scenes/player.tscn")
 	player = player_scene.instantiate()
-	# Spawn at major road intersection (v_road 100 x h_road 75), with fallback
-	var spawn = _find_nearest_walkable(Vector2i(100, 75))
+	# Spawn at 100 Feet Road x CMH Road intersection (x=5, y=23)
+	var spawn = _find_nearest_walkable(Vector2i(5, 23))
 	player.set_grid_position(spawn, false)
 	add_child(player)
 
@@ -587,13 +624,13 @@ func _input(event):
 			elif event.keycode == KEY_MINUS:
 				target_zoom = clampf(target_zoom - ZOOM_STEP, ZOOM_MIN, ZOOM_MAX)
 			elif event.keycode == KEY_0:
-				target_zoom = 0.3  # Reset to default
+				target_zoom = 0.5  # Reset to default
 
 func _get_move_step() -> int:
 	# Move more tiles per step when zoomed out
-	# At default zoom (0.3) = 1 tile, at full zoom out (0.02) = ~15 tiles
-	var current_zoom = camera.zoom.x if camera else 0.3
-	return max(1, roundi(0.3 / current_zoom))
+	# At default zoom (0.5) = 1 tile, scales up when zoomed out
+	var current_zoom = camera.zoom.x if camera else 0.5
+	return max(1, roundi(0.5 / current_zoom))
 
 func _try_move(direction: Vector2i):
 	var step = _get_move_step()
