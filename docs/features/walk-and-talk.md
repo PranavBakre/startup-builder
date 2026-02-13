@@ -11,7 +11,7 @@ The player moves around a tile-based map inspired by Indiranagar, Bangalore, enc
 - 5 stationary NPCs placed at road intersections and landmarks
 - Interact with NPCs by walking adjacent and pressing C to open dialogue
 - Each NPC delivers a unique dialogue sequence that surfaces a real-world startup problem
-- 2.5D aesthetic via Stardew Valley-style sprite art (3/4 view props/characters, top-down tiles)
+- Photorealistic aerial drone photography style (top-down tiles/buildings/props, 3/4 view characters)
 - Camera zoom (trackpad pinch, mouse wheel, Cmd+/-) with movement speed scaling
 
 ## Design
@@ -143,26 +143,43 @@ Major overhaul to make the game look and feel like Indiranagar, Bangalore:
 5. **Movement speed scaling** — Faster movement when zoomed out
 
 6. **Sprite generation overhaul** (`startup-game-tools/generate_sprites.py`)
-   - Dual-engine: Imagen 4 for tiles/props, Gemini Flash for characters
+   - Multi-provider: Google (Imagen 4 + Gemini Flash) or OpenAI (GPT Image) via `--provider` flag
+   - Art style: photorealistic aerial drone photography matching `wall_bungalow.png`
    - Indiranagar visual theme: laterite soil, rain trees, ashoka trees, bougainvillea, marigolds, compound walls, Indian post boxes, green dustbins
-   - Indian characters: brown skin, kurta, salwar kameez, saree
+   - Indian characters: brown skin, kurta, salwar kameez, saree (realistic illustrated, not pixel art)
    - Magenta background removal for transparency
 
 7. **NPC spawn safety** — `_find_nearest_walkable()` ensures NPCs/player never spawn inside buildings
 
 ## Sprite Generation
 
-Located at `../startup-game-tools/generate_sprites.py`. Run with `uv run python generate_sprites.py`.
+Located at `../startup-game-tools/generate_sprites.py`.
 
-**Dual engine approach:**
-- **Imagen 4** (`imagen-4.0-generate-001`) — tiles and props (via `generate_images` API)
-- **Gemini Flash** (`gemini-2.5-flash-image`) — characters (via `generate_content` API, handles people better)
+```bash
+# Google provider (default): Imagen 4 for tiles/props, Gemini Flash for characters
+uv run python generate_sprites.py
 
-**Style conventions:**
-- Ground/building tiles: `top-down view, tileable seamless pattern`
-- Props: `Stardew Valley style, front-facing with slight top-down angle, solid flat bright magenta background`
-- Characters: `Stardew Valley style, standing pose facing forward, full body, solid flat bright magenta background`
-- All prompts include: `no text, no numbers, no labels, no watermarks`
+# OpenAI provider: GPT Image for all assets
+uv run python generate_sprites.py --provider openai
+```
+
+**Providers:**
+- **Google (default):** Imagen 4 (`imagen-4.0-fast-generate-001`) for tiles/props + Gemini Flash (`gemini-2.5-flash-image`) for characters
+- **OpenAI:** GPT Image (`gpt-image-1.5`) for all assets
+
+**Art style: Photorealistic aerial drone photography** (reference: `wall_bungalow.png`)
+- Warm natural sunlight, soft realistic shadows
+- Indian / Bangalore / Indiranagar neighborhood aesthetic
+- Lush tropical vegetation (coconut palms, bougainvillea, rain trees)
+
+**Style conventions by category:**
+- **Ground tiles:** `photorealistic aerial drone photograph, top-down bird's eye view, seamless tileable texture`
+- **Building tiles:** `photorealistic aerial drone photograph, top-down bird's eye view, lush green grass and tropical plants surrounding the structure` — complete buildings with landscaping (Google Earth style)
+- **Props:** `photorealistic aerial drone photograph, top-down bird's eye view, isolated on solid magenta background` — individual objects seen from directly above
+- **Characters:** `photorealistic digital illustration, 3/4 front-facing view, warm natural lighting, isolated on solid magenta background` — realistic illustrated figures (3/4 view for gameplay readability)
+- All prompts include: `no text, no numbers, no labels, no watermarks, no UI elements`
+
+**Transparency:** Props and characters use magenta (#FF00FF) background, removed in post-processing via top-left pixel color matching (10 RGB tolerance).
 
 ## Code Index
 
@@ -191,6 +208,7 @@ Located at `../startup-game-tools/generate_sprites.py`. Run with `uv run python 
 | Branching dialogue | Not needed — linear only | Maybe v0.2+ |
 | 4-directional player sprites | Only left/right flip currently | Polish pass |
 | Sound effects | Not core | Later |
+| 3D model assets | AI-generated images have baked shadows (inconsistent direction/intensity) and inter-tile variance (roads/grass don't seamlessly match). Replace with 3D models for consistent renderer-driven lighting and deterministic tileable textures. | Pre-v2 art pass |
 
 ## Acceptance Criteria (Full v0.1)
 
