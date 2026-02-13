@@ -163,11 +163,6 @@ func _spawn_player():
 	player = player_scene.instantiate()
 	player.set_grid_position(Vector2i(5, 7), false)  # No animation on spawn
 	add_child(player)
-	_update_camera()
-
-func _update_camera():
-	if player and camera:
-		camera.position = player.position
 
 func _spawn_npcs():
 	var npc_scene = preload("res://scenes/npc.tscn")
@@ -179,9 +174,9 @@ func _spawn_npcs():
 		add_child(npc)
 
 func _process(delta):
-	# Smooth camera follow
+	# Camera follows player (using built-in smoothing)
 	if player and camera:
-		camera.position = camera.position.lerp(player.position, 0.1)
+		camera.position = player.position
 
 	# Continuous movement when holding keys (only if not in dialogue and not moving)
 	if active_dialogue == null and player and not player.is_moving:
@@ -252,7 +247,6 @@ func _try_move(direction: Vector2i):
 	# Move is valid
 	print("Moving to ", new_pos)
 	player.set_grid_position(new_pos, true, direction)  # Animate movement with direction
-	_update_camera()
 	_check_npc_proximity()
 
 func _check_npc_proximity():
