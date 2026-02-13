@@ -4,6 +4,7 @@ extends Node2D
 enum TileType {
 	GROUND, GROUND_GRASS, GROUND_DIRT, GROUND_SAND,
 	WALL, WALL_BRICK, WALL_WOOD, ROOF,
+	WALL_SCHOOL, WALL_OFFICE, WALL_BUNGALOW, PARK_GROUND,
 	TREE, TREE_PINE, BUSH, FLOWERS,
 	BENCH, LAMP_POST, FENCE, FOUNTAIN, MAILBOX, TRASH_CAN, SIGN_SHOP
 }
@@ -206,6 +207,12 @@ func _generate_map():
 		Vector4i(6, 11, 8, 13)     # BDA Complex green / Metro area
 	]
 
+	# Blocks designated as schools (near Priya the teacher at 28,46)
+	var school_block_keys = [
+		Vector4i(29, 34, 41, 45),  # School near Defence Colony
+		Vector4i(21, 27, 15, 18),  # School near 100 Feet Road
+	]
+
 	for xr in x_blocks:
 		for yr in y_blocks:
 			var block_w = xr[1] - xr[0] + 1
@@ -222,6 +229,13 @@ func _generate_map():
 			if is_park:
 				continue
 
+			# Check if this block is a school
+			var is_school = false
+			for sk in school_block_keys:
+				if xr[0] == sk.x and xr[1] == sk.y and yr[0] == sk.z and yr[1] == sk.w:
+					is_school = true
+					break
+
 			# Zone: commercial near 100ft Road or 12th Main
 			var is_commercial = false
 			if yr[0] >= 20 and yr[1] <= 29:
@@ -229,12 +243,26 @@ func _generate_map():
 			if xr[0] >= 36 and xr[1] <= 49:
 				is_commercial = true
 
-			# Wall type by zone
+			# Wall type by zone and building purpose
 			var wt
-			if is_commercial:
-				wt = TileType.WALL_BRICK if rng.randf() < 0.7 else TileType.WALL
+			if is_school:
+				wt = TileType.WALL_SCHOOL
+			elif is_commercial:
+				var roll = rng.randf()
+				if roll < 0.35:
+					wt = TileType.WALL_OFFICE
+				elif roll < 0.70:
+					wt = TileType.WALL_BRICK
+				else:
+					wt = TileType.WALL
 			else:
-				wt = TileType.WALL_WOOD if rng.randf() < 0.6 else TileType.WALL_BRICK
+				var roll = rng.randf()
+				if roll < 0.35:
+					wt = TileType.WALL_BUNGALOW
+				elif roll < 0.65:
+					wt = TileType.WALL_WOOD
+				else:
+					wt = TileType.WALL_BRICK
 
 			# Building fills most of block (1 tile grass buffer)
 			var bw = maxi(2, block_w - rng.randi_range(1, 2))
@@ -263,48 +291,55 @@ func _generate_map():
 	# ============================================================
 	# PARKS — hand-placed Indiranagar landmarks
 	# ============================================================
+	# Fill park blocks with park ground texture
+	for pk in park_block_keys:
+		for py in range(pk.z, pk.w + 1):
+			for px in range(pk.x, pk.y + 1):
+				if tile_map[py][px] == TileType.GROUND_GRASS:
+					tile_map[py][px] = TileType.PARK_GROUND
+
 	# Park 1: Indiranagar Park (block x=6-11, y=31-35)
 	var p1 = Vector2i(8, 33)
 	tile_map[p1.y][p1.x] = TileType.FOUNTAIN
 	for pos in [Vector2i(7, 32), Vector2i(9, 34)]:
-		if tile_map[pos.y][pos.x] == TileType.GROUND_GRASS:
+		if tile_map[pos.y][pos.x] == TileType.PARK_GROUND:
 			tile_map[pos.y][pos.x] = TileType.BENCH
 	for pos in [Vector2i(10, 32), Vector2i(7, 34), Vector2i(9, 31)]:
-		if tile_map[pos.y][pos.x] == TileType.GROUND_GRASS:
+		if tile_map[pos.y][pos.x] == TileType.PARK_GROUND:
 			tile_map[pos.y][pos.x] = TileType.FLOWERS
 	for _t in range(6):
 		var px = p1.x + rng.randi_range(-2, 2)
 		var py = p1.y + rng.randi_range(-2, 2)
 		if px >= 6 and px <= 11 and py >= 31 and py <= 35:
-			if tile_map[py][px] == TileType.GROUND_GRASS:
+			if tile_map[py][px] == TileType.PARK_GROUND:
 				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
 	# Park 2: Defence Colony Playground (block x=51-55, y=41-45)
 	var p2 = Vector2i(53, 43)
 	tile_map[p2.y][p2.x] = TileType.FOUNTAIN
-	if tile_map[42][52] == TileType.GROUND_GRASS:
+	if tile_map[42][52] == TileType.PARK_GROUND:
 		tile_map[42][52] = TileType.BENCH
-	if tile_map[44][54] == TileType.GROUND_GRASS:
+	if tile_map[44][54] == TileType.PARK_GROUND:
 		tile_map[44][54] = TileType.FLOWERS
 	for _t in range(4):
 		var px = p2.x + rng.randi_range(-2, 2)
 		var py = p2.y + rng.randi_range(-2, 2)
 		if px >= 51 and px <= 55 and py >= 41 and py <= 45:
-			if tile_map[py][px] == TileType.GROUND_GRASS:
+			if tile_map[py][px] == TileType.PARK_GROUND:
 				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
 	# Park 3: BDA Complex / Metro green (block x=6-11, y=8-13)
 	var p3 = Vector2i(8, 10)
 	tile_map[p3.y][p3.x] = TileType.FOUNTAIN
-	if tile_map[9][7] == TileType.GROUND_GRASS:
+	if tile_map[9][7] == TileType.PARK_GROUND:
 		tile_map[9][7] = TileType.BENCH
-	if tile_map[11][10] == TileType.GROUND_GRASS:
+	if tile_map[11][10] == TileType.PARK_GROUND:
 		tile_map[11][10] = TileType.FLOWERS
 	for _t in range(5):
 		var px = p3.x + rng.randi_range(-2, 2)
 		var py = p3.y + rng.randi_range(-2, 2)
 		if px >= 6 and px <= 11 and py >= 8 and py <= 13:
-			if tile_map[py][px] == TileType.GROUND_GRASS:
+			if tile_map[py][px] == TileType.PARK_GROUND:
 				tile_map[py][px] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
 	# ============================================================
@@ -400,7 +435,7 @@ func _generate_map():
 			var nx = fx + d.x
 			var ny = fy + d.y
 			if nx >= 0 and nx < MAP_WIDTH and ny >= 0 and ny < MAP_HEIGHT:
-				if tile_map[ny][nx] in [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD]:
+				if tile_map[ny][nx] in [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD, TileType.WALL_SCHOOL, TileType.WALL_OFFICE, TileType.WALL_BUNGALOW]:
 					near_building = true
 					break
 		if near_building:
@@ -424,7 +459,8 @@ func _generate_map():
 
 # Walkable tile types
 var walkable_tiles = [
-	TileType.GROUND, TileType.GROUND_GRASS, TileType.GROUND_DIRT, TileType.GROUND_SAND
+	TileType.GROUND, TileType.GROUND_GRASS, TileType.GROUND_DIRT, TileType.GROUND_SAND,
+	TileType.PARK_GROUND
 ]
 
 func _render_tiles():
@@ -437,6 +473,10 @@ func _render_tiles():
 		TileType.WALL_BRICK: load("res://assets/tiles/wall_brick.png"),
 		TileType.WALL_WOOD: load("res://assets/tiles/wall_wood.png"),
 		TileType.ROOF: load("res://assets/tiles/roof.png"),
+		TileType.WALL_SCHOOL: load("res://assets/tiles/wall_school.png"),
+		TileType.WALL_OFFICE: load("res://assets/tiles/wall_office.png"),
+		TileType.WALL_BUNGALOW: load("res://assets/tiles/wall_bungalow.png"),
+		TileType.PARK_GROUND: load("res://assets/tiles/park_ground.png"),
 		TileType.TREE: load("res://assets/tiles/tree.png"),
 		TileType.TREE_PINE: load("res://assets/tiles/tree_pine.png"),
 		TileType.BUSH: load("res://assets/tiles/bush.png"),
@@ -488,7 +528,7 @@ func _render_tiles():
 				add_child(sprite)
 
 			# Props sit on grass — render grass underneath
-			var wall_types_set = [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD, TileType.ROOF]
+			var wall_types_set = [TileType.WALL, TileType.WALL_BRICK, TileType.WALL_WOOD, TileType.ROOF, TileType.WALL_SCHOOL, TileType.WALL_OFFICE, TileType.WALL_BUNGALOW]
 			if tile_type not in walkable_tiles and tile_type not in wall_types_set:
 				var grass_tex = tile_textures.get(TileType.GROUND_GRASS)
 				if grass_tex:
