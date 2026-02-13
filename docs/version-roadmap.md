@@ -46,6 +46,7 @@ Time starts passing. The economy infrastructure exists even before there are exp
 - Economy foundation — live balance tracking, burn rate display (starts at $0)
 - Save/load game state (position, company, problems, time)
 - Pause/unpause
+- Mobile controls — virtual joystick for movement, on-screen buttons for interact/journal/menu
 
 **Brief references:** Time Scale, Economy Summary
 

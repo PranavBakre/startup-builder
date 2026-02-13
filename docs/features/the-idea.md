@@ -182,3 +182,7 @@ var talked_to: Dictionary = {}         # { npc_id: true } tracks first-talk
 ## Changes
 
 - 2026-02-13: Initial documentation (pre-build)
+- 2026-02-13: Design discussion — mobile controls (Tab to open journal) deferred to v0.3 which will add virtual joystick + on-screen buttons for all interactions
+- 2026-02-13: Design discussion — company name accepts any input, no validation or profanity filter (profanity filter deferred to v2)
+- 2026-02-13: Design discussion — founding is intentionally irreversible, no undo or confirmation dialog (undo deferred to v2)
+- 2026-02-13: Design discussion — considering extracting game state from world.gd into a GameState autoload singleton to centralize persistent state and simplify v0.3 save/load (decision pending)
