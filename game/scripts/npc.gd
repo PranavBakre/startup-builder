@@ -32,7 +32,7 @@ func setup(data: Dictionary):
 		sprite.texture = texture
 		# Scale from source texture to TILE_SIZE
 		var tex_size = texture.get_size()
-		sprite.scale = Vector2(float(TILE_SIZE) / tex_size.x, float(TILE_SIZE) / tex_size.y)
+		sprite.scale = Vector2(float(TILE_SIZE) * 0.6 / tex_size.x, float(TILE_SIZE) * 0.6 / tex_size.y)
 	else:
 		print("ERROR: Could not load texture or find sprite for NPC: ", npc_id)
 

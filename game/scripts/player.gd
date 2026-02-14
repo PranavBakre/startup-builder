@@ -19,6 +19,10 @@ var last_direction = Vector2i(0, 1)  # Default facing down
 
 func _ready():
 	update_world_position()
+	# Scale sprite to ~60% of a tile
+	var tex_size = sprite.texture.get_size()
+	var char_scale = float(TILE_SIZE) * 0.6 / tex_size.x
+	sprite.scale = Vector2(char_scale, char_scale)
 	# Y-sort based on position
 	z_index = 0
 	y_sort_enabled = true

@@ -158,26 +158,30 @@ func _generate_map():
 	for x in range(MAP_WIDTH):
 		tile_map[23][x] = TileType.GROUND
 		tile_map[24][x] = TileType.GROUND
-	# E-W: 80 Feet Road — secondary artery
+	# E-W: 80 Feet Road — secondary artery (2 tiles wide)
 	for x in range(MAP_WIDTH):
 		tile_map[40][x] = TileType.GROUND
+		tile_map[41][x] = TileType.GROUND
 	# N-S: CMH Road — major north-south (2 tiles wide)
 	for y in range(MAP_HEIGHT):
 		tile_map[y][4] = TileType.GROUND
 		tile_map[y][5] = TileType.GROUND
-	# N-S: 12th Main — the famous cafe/commercial strip
+	# N-S: 12th Main — the famous cafe/commercial strip (2 tiles wide)
 	for y in range(MAP_HEIGHT):
 		tile_map[y][42] = TileType.GROUND
-	# Cross streets (E-W, numbered, 1 tile each)
+		tile_map[y][43] = TileType.GROUND
+	# Cross streets (E-W, 2 tiles each)
 	var cross_ys = [7, 14, 19, 30, 36, 46]
 	for ry in cross_ys:
 		for x in range(MAP_WIDTH):
 			tile_map[ry][x] = TileType.GROUND
-	# Main roads (N-S, numbered, 1 tile each)
+			tile_map[ry + 1][x] = TileType.GROUND
+	# Main roads (N-S, 2 tiles each)
 	var main_xs = [12, 20, 28, 35, 50, 56]
 	for rx in main_xs:
 		for y in range(MAP_HEIGHT):
 			tile_map[y][rx] = TileType.GROUND
+			tile_map[y][rx + 1] = TileType.GROUND
 
 	# Border walls
 	for x in range(MAP_WIDTH):
@@ -192,25 +196,25 @@ func _generate_map():
 	# ============================================================
 	# City blocks: grass rectangles between road lines
 	var x_blocks = [
-		[1, 3], [6, 11], [13, 19], [21, 27],
-		[29, 34], [36, 41], [43, 49], [51, 55], [57, 58]
+		[1, 3], [6, 11], [14, 19], [22, 27],
+		[30, 34], [37, 41], [44, 49], [52, 55], [58, 58]
 	]
 	var y_blocks = [
-		[1, 6], [8, 13], [15, 18], [20, 22],
-		[25, 29], [31, 35], [37, 39], [41, 45], [47, 48]
+		[1, 6], [9, 13], [16, 18], [21, 22],
+		[25, 29], [32, 35], [38, 39], [42, 45], [48, 48]
 	]
 
 	# Blocks reserved for parks (exact match with x_blocks/y_blocks entries)
 	var park_block_keys = [
-		Vector4i(6, 11, 31, 35),   # Indiranagar Park
-		Vector4i(51, 55, 41, 45),  # Defence Colony Playground
-		Vector4i(6, 11, 8, 13)     # BDA Complex green / Metro area
+		Vector4i(6, 11, 32, 35),   # Indiranagar Park
+		Vector4i(52, 55, 42, 45),  # Defence Colony Playground
+		Vector4i(6, 11, 9, 13)     # BDA Complex green / Metro area
 	]
 
 	# Blocks designated as schools (near Priya the teacher at 28,46)
 	var school_block_keys = [
-		Vector4i(29, 34, 41, 45),  # School near Defence Colony
-		Vector4i(21, 27, 15, 18),  # School near 100 Feet Road
+		Vector4i(30, 34, 42, 45),  # School near Defence Colony
+		Vector4i(22, 27, 16, 18),  # School near 100 Feet Road
 	]
 
 	for xr in x_blocks:
@@ -265,8 +269,8 @@ func _generate_map():
 					wt = TileType.WALL_BRICK
 
 			# Building fills most of block (1 tile grass buffer)
-			var bw = maxi(2, block_w - rng.randi_range(1, 2))
-			var bh = maxi(2, block_h - rng.randi_range(1, 2))
+			var bw = maxi(3, block_w - rng.randi_range(0, 1))
+			var bh = maxi(3, block_h - rng.randi_range(0, 1))
 			var bx = xr[0] + rng.randi_range(0, maxi(0, block_w - bw))
 			var by = yr[0] + rng.randi_range(0, maxi(0, block_h - bh))
 
@@ -364,21 +368,25 @@ func _generate_map():
 		if tile_map[y][6] == TileType.GROUND_GRASS:
 			tile_map[y][6] = tt
 
-	# All other roads: trees on both sides every 3 tiles
-	var all_ew_roads = [7, 14, 19, 30, 36, 40, 46]
-	for ry in all_ew_roads:
+	# All other roads: trees on both sides every 3 tiles (roads are now 2 tiles wide)
+	# E-W roads: top edge at ry, bottom edge at ry+1; trees at ry-1 and ry+2
+	# 80 Feet Road: 40-41; Cross streets: each ry and ry+1
+	var all_ew_roads_top = [7, 14, 19, 30, 36, 40, 46]
+	for ry in all_ew_roads_top:
 		for x in range(2, MAP_WIDTH - 2, 3):
 			if ry > 1 and tile_map[ry - 1][x] == TileType.GROUND_GRASS:
 				tile_map[ry - 1][x] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
-			if ry + 1 < MAP_HEIGHT - 1 and tile_map[ry + 1][x] == TileType.GROUND_GRASS:
-				tile_map[ry + 1][x] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
-	var all_ns_roads = [12, 20, 28, 35, 42, 50, 56]
-	for rx in all_ns_roads:
+			if ry + 2 < MAP_HEIGHT - 1 and tile_map[ry + 2][x] == TileType.GROUND_GRASS:
+				tile_map[ry + 2][x] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+	# N-S roads: left edge at rx, right edge at rx+1; trees at rx-1 and rx+2
+	# 12th Main: 42-43; Main roads: each rx and rx+1
+	var all_ns_roads_left = [12, 20, 28, 35, 42, 50, 56]
+	for rx in all_ns_roads_left:
 		for y in range(2, MAP_HEIGHT - 2, 3):
 			if rx > 1 and tile_map[y][rx - 1] == TileType.GROUND_GRASS:
 				tile_map[y][rx - 1] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
-			if rx + 1 < MAP_WIDTH - 1 and tile_map[y][rx + 1] == TileType.GROUND_GRASS:
-				tile_map[y][rx + 1] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
+			if rx + 2 < MAP_WIDTH - 1 and tile_map[y][rx + 2] == TileType.GROUND_GRASS:
+				tile_map[y][rx + 2] = TileType.TREE if rng.randf() < 0.7 else TileType.TREE_PINE
 
 	# ============================================================
 	# STREET FURNITURE — benches, trash cans, signs along roads
