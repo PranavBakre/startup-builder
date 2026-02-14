@@ -18,9 +18,11 @@ Every version has one core mechanic — the thing that makes it a distinct versi
 
 The answer should be one sentence. If it's not, scope is too big.
 
-### 2. Find Iteration 0
+### 2. Plan the Iteration Path
 
-The most important question:
+Every version is built through a series of iterations — not just iteration 0 and the final product. Each iteration adds one meaningful layer on top of the last.
+
+#### Iteration 0 — The Smallest Proof
 
 > "What is the smallest working proof of this version's core mechanic?"
 
@@ -35,23 +37,44 @@ If you can't define iteration 0 clearly, the version scope is too broad — cut 
 
 **For every version after that:** The previous version's game already exists. Iteration 0 is the new mechanic integrated into the existing game at its simplest — minimal UI, hardcoded data, no polish, but wired into what's already running.
 
-**Example — v0.4 (The Team):**
+#### Iterations 1, 2, 3… — Incremental Layers
 
-The core mechanic is hiring. Here's how it breaks down:
+After iteration 0 proves the mechanic, build up to the full feature through numbered iterations. Each one adds exactly **one layer** of functionality or polish:
 
-- **v0.4.0 (iteration 0):** A hardcoded job posting and 2-3 hardcoded applicants appear in-game. Player picks one. Burn rate updates on the existing HUD. No job creation UI, no dynamic applicants — just proof that hiring connects to the economy system.
-- **v0.4 (full version):** Player creates custom job postings with role and salary range. NPC applicants arrive dynamically over in-game time with randomized attributes. Full hire/reject flow. Employee roster panel.
+- **Iteration 0:** Prove it works (hardcoded, ugly, minimal)
+- **Iteration 1:** Add the next most important missing piece (e.g., real UI, dynamic data)
+- **Iteration 2:** Add the next layer (e.g., edge cases, visual polish, secondary mechanics)
+- **Iteration N:** Full feature complete
 
-Iteration 0 validates the mechanic with hardcoded data. The full version makes it dynamic and gives it a proper UI.
+**Rules for iterations:**
+- Each iteration must be **playable and testable** on its own
+- Each iteration should be **one commit** (or a small batch of commits)
+- Document what each iteration adds in the feature doc
+- Don't skip ahead — if iteration 2 depends on iteration 1, build 1 first
+- The number of iterations depends on the feature's complexity — simple features might be 2-3, complex ones might be 5+
 
-**Example — v0.1 (Walk & Talk):**
+#### Example — v0.4 (The Team)
 
-The core mechanic is exploration and NPC interaction. Since no game exists yet, iteration 0 is a standalone console proof:
+The core mechanic is hiring:
 
-- **v0.1.0 (iteration 0):** Console grid, move a text symbol with keyboard input, detect adjacency to an NPC tile, print their dialogue as text output.
-- **v0.1 (full version):** Rendered tile map with sprites, animated player movement, camera follow, NPC sprites on the map, dialogue overlay UI.
+- **Iteration 0:** A hardcoded job posting and 2-3 hardcoded applicants appear in-game. Player picks one. Burn rate updates on the existing HUD. No job creation UI, no dynamic applicants — just proof that hiring connects to the economy system.
+- **Iteration 1:** Job board UI — player creates custom postings with role and salary range.
+- **Iteration 2:** Dynamic applicants — NPC applicants arrive over in-game time with randomized attributes (experience, skills, salary expectation).
+- **Iteration 3:** Full hire/reject flow with employee roster panel. Polish and edge cases.
 
-**Red flag:** If your iteration 0 sounds like the full version, it's too big. Cut until there's a clear gap between the two.
+#### Example — v0.1 (Walk & Talk)
+
+The core mechanic is exploration and NPC interaction:
+
+- **Iteration 0:** Console grid, move a text symbol with keyboard input, detect adjacency to an NPC tile, print their dialogue as text output.
+- **Iteration 1:** Godot scene with Sprite2D nodes, proper scene structure, placeholder sprites.
+- **Iteration 2:** Smooth tween movement, Camera2D follow with smoothing.
+- **Iteration 3:** Tile sprites, 3 NPCs, typewriter dialogue effect, interaction prompt.
+- **Iteration 4:** Indiranagar map rework, 5 NPCs, zoom controls, movement scaling, themed sprites.
+
+Each iteration was playable and testable. Each added one clear layer.
+
+**Red flag:** If your iteration 0 sounds like the full version, it's too big. Cut until there's a clear gap between iterations.
 
 ### 3. Challenge Scope
 
@@ -97,7 +120,7 @@ If any of these appear in a version's scope, push back:
 After running through this process, you should have:
 
 1. **Core mechanic** — one sentence
-2. **Iteration 0** — one sentence describing the smallest proof
+2. **Iteration plan** — numbered list from iteration 0 through full feature, each one sentence describing what it adds
 3. **Scope** — clean bullet list (matches or trims the version roadmap entry)
 4. **Cuts** — anything removed from the original roadmap entry for this version
 5. **Feature doc** — written in `docs/features/` and ready for building

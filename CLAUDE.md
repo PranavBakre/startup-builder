@@ -64,7 +64,7 @@ The [full game brief](docs/startup-simulator-game-brief.md) describes the comple
 
 1. **Docs first, code second** — Before building any feature, document it in `docs/features/<feature-name>.md`. Get alignment on approach, then implement.
 2. **One version at a time** — Do not build mechanics from a later version. If tempted, note it in the roadmap and move on.
-3. **Iteration 0 for each version** — Every sub-version starts with the smallest working proof of its core mechanic. For v0.1 this is a standalone console proof. For later versions, it's the new mechanic wired into the existing game at its simplest.
+3. **Iterative build-up** — Every sub-version starts with iteration 0 (smallest working proof), then builds up through numbered iterations (1, 2, 3…), each adding one layer. Don't jump from iteration 0 to the final feature.
 4. **Playable at every version** — Each sub-version must result in something a player can interact with. No "infrastructure only" versions.
 5. **Feature-tagged documentation** — Every feature gets a doc in `docs/features/` with tags for grepability.
 6. **Checkpoint = commit** — After every working increment, commit with a descriptive message. Git history is project history.
@@ -113,7 +113,7 @@ Follow [docs/rules/ideation.md](docs/rules/ideation.md) before writing any code:
 
 1. **Check the roadmap** — Is this feature in the current target version? If not, stop.
 2. **Build iteration 0** — Smallest working proof, testable in terminal or browser console.
-3. **Build the feature** — Logic first, then UI, then polish.
+3. **Build iterations 1, 2, 3…** — Each adds one layer. Each is playable and testable. Don't skip ahead.
 4. **Test it** — Verify it works in the game context.
 5. **Update docs** — Finalize the feature doc with actual code index.
 6. **Append to CHANGELOG.md** — Record what was built.
