@@ -9,8 +9,21 @@ Startup Simulator is an HD-2D top-down game where the player builds a digital pr
 **Platforms:** Desktop + Mobile (virtual joystick on mobile, keyboard on desktop)
 
 **Status:** v0.1 complete, building v0.2
-**Tech Stack:** Godot 4
+**Tech Stack:** Godot 4 (game), Python/uv (tools)
 **Current Target:** v0.2
+
+## Repository Structure
+
+Monorepo with two sub-projects:
+
+```
+startup-game/
+├── game/           — Godot 4 project (open game/project.godot in Godot)
+├── tools/          — Python tooling (sprite generation, etc.)
+├── docs/           — Shared documentation (features, roadmap, design)
+├── CLAUDE.md
+└── CHANGELOG.md
+```
 
 ## Documentation Index
 
@@ -73,7 +86,14 @@ The [full game brief](docs/startup-simulator-game-brief.md) describes the comple
 ## Commands
 
 ```bash
-# TBD — populated when tech stack is chosen and project is initialized
+# Game — open in Godot editor
+open game/project.godot
+
+# Tools — install dependencies (requires uv)
+cd tools && uv sync
+
+# Tools — run sprite generator
+cd tools && uv run python generate_sprites.py
 ```
 
 ## Workflow
