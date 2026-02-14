@@ -77,6 +77,8 @@ The HD-2D approach means: **2D sprites rendered in a 3D-lit environment**. Sprit
    - `CanvasModulate` for ambient color shifts (warm morning, neutral midday, orange evening)
    - Point `Light2D` for lamps, shop signs, etc.
 
+> ⚠️ 3D transition note: `Light2D` and `LightOccluder2D` are replaced entirely by 3D lighting and real mesh shadows in Pre-V2. The *parameters* (sun angle, ambient color, glow radius) carry forward as design intent, but the nodes themselves are throwaway. Keep lighting config in data (not hardcoded) so it can be re-applied to 3D lights easily. See §9.
+
 3. **`LightOccluder2D`** on buildings and tall props to cast real-time 2D shadows. These are geometric (polygonal), not texture-based — they'll be consistent and dynamic.
 
 4. **Normal maps** (stretch goal): AI-generated normal maps or simple auto-generated ones can give sprites a pseudo-3D response to light. This is the HD-2D secret sauce. Not required for v0.2 but should be planned for.
@@ -94,6 +96,8 @@ top-down perspective, illustrated style, warm color palette
 
 ### The Problem
 A 2×3 building ≠ a stretched 4×4 building. Single-texture scaling doesn't work.
+
+> ⚠️ 3D transition note: The 9-slice system is **temporary scaffolding**. In Pre-V2, buildings become 3D meshes that Godot renders directly — no tile composition needed. Build this system to be functional but don't over-invest in edge cases or polish. The abstraction layer matters more than the tiles themselves (see §9.4).
 
 ### Solution: Modular Tile Composition
 
@@ -209,6 +213,8 @@ Indiranagar, Bangalore — warm, tropical, slightly dusty. Not neon. Not cold.
 ---
 
 ## 6. Character Style Recommendation
+
+> ⚠️ 3D transition note: The stylized illustrated *design language* carries into 3D — think cel-shaded or stylized 3D (like Ghibli's Ni no Kuni or A Short Hike), not photorealistic 3D. The character proportions, color palette, and warmth defined here become the brief for 3D character models. See §9.4.
 
 ### Recommended: **Stylized Illustrated** (not pixel art, not chibi, not photorealistic)
 
@@ -389,6 +395,148 @@ Iterative migration — each iteration adds one layer, is testable on its own, a
 
 ---
 
+## 9. 3D Model Transition (Pre-V2)
+
+The version roadmap defines a **Pre-V2 Art Pass** where AI-generated 2D sprites are replaced with 3D models before V2 feature work begins. This section defines what survives, what gets replaced, what gets thrown away, and what we should decide now to make that transition less painful.
+
+### 9.1 What Carries Forward
+
+These investments are **permanent** — they survive the 2D→3D transition intact:
+
+- **Color palette (§5).** Every hex code, every tone rule. The palette becomes material colors and texture tints for 3D models. This is the most durable work in the entire art direction.
+- **Style tone.** Warm, cozy, Stardew-meets-Ghibli, Indiranagar-tropical. This becomes the brief for 3D art style (stylized/cel-shaded, not photorealistic).
+- **Character design language (§6).** Proportions, diversity guidelines, clothing styles, the "stylized illustrated" direction — all of this translates directly into 3D character model specs.
+- **Map layout & tile grid.** The 320px grid, zone definitions, building footprints, prop placement — all game-logic level. 3D models just snap into the same grid positions.
+- **All game logic.** Economy, NPCs, dialogue, hiring, product development — zero code changes needed. The renderer changes; the simulation doesn't.
+- **Lighting design intent.** Sun angle, ambient color presets (morning/midday/evening), lamp glow colors and radii — these are *design parameters* that transfer to 3D lights even though the implementation nodes change completely.
+- **Building type taxonomy.** WALL_BRICK, WALL_OFFICE, WALL_WOOD, etc. — the *types* and their visual descriptions remain. Only the *assets* change.
+
+### 9.2 What Gets Replaced
+
+Direct 1:1 replacements — same function, different technology:
+
+| 2D (Current) | 3D (Pre-V2) | Notes |
+|---|---|---|
+| 9-slice building tiles (63 PNGs) | 3D building meshes (7 models with LOD) | One mesh per building type, scales to any footprint via parameterization |
+| 2D prop sprites (11 PNGs) | 3D prop models | Trees, benches, lamps become meshes with proper depth |
+| Ground tile textures | 3D terrain or textured planes | Could stay as textured quads if top-down camera is retained |
+| `Light2D` nodes | `OmniLight3D` / `DirectionalLight3D` | Same design parameters, different node types |
+| `LightOccluder2D` polygons | Real mesh shadows (shadow maps) | Eliminated entirely — meshes cast their own shadows |
+| `CanvasModulate` | `WorldEnvironment` + `Environment` | Ambient color, fog, tonemap — richer control |
+| Normal maps on sprites | Actual mesh geometry | Normal maps were faking what 3D gives you for free |
+| 2D character sprites (4-dir) | 3D character models with skeletal animation | Massively more expressive — walk cycles, idle anims, etc. |
+| `process_sprites.py` pipeline | 3D asset import pipeline (`.glb`/`.gltf`) | AI generation workflow dies; replaced by modeling workflow |
+
+### 9.3 What Gets Thrown Away
+
+Honest accounting of **temporary work** — things we build knowing they won't survive:
+
+**Fully disposable (0% reuse):**
+- All AI-generated PNG sprites (ground, buildings, props, characters) — every pixel
+- The `process_sprites.py` post-processing pipeline (bg removal, color quantization, seamless tiling)
+- `LightOccluder2D` polygon definitions (manual or auto-generated)
+- Normal maps generated from 2D sprites
+- 9-slice slicing logic in `process_sprites.py`
+- Prompt engineering templates in the Appendix (AI generation stops)
+- Style reference images used for AI prompt consistency
+
+**Partially disposable (code changes, not rewrites):**
+- 9-slice rendering code in `world.gd` `_render_tiles()` — the tile-lookup logic dies, but the function structure that says "for each building, render it at this grid position" survives. It just calls a different renderer.
+- Sprite atlas / texture organization — file structure changes but naming conventions can carry over
+
+**Not disposable at all:**
+- Everything in §9.1
+
+**The ratio:** Roughly 70% of *art pipeline* work is throwaway. Roughly 5% of *game logic* work is throwaway. This is why 2D-first is still correct (§9.5).
+
+### 9.4 Design Decisions to Make NOW
+
+These decisions during 2D development will significantly ease (or complicate) the 3D transition:
+
+#### Should the 9-slice system be built to be easily swappable?
+
+**Yes, but don't over-engineer it.** The right abstraction is:
+
+```
+# world.gd should NOT do this:
+func _render_building(type, footprint):
+    # 50 lines of 9-slice tile lookup and placement
+
+# world.gd SHOULD do this:
+func _render_building(type, footprint):
+    building_renderer.render(type, footprint, position)
+```
+
+Extract building rendering into a swappable component (`BuildingRenderer2D` now, `BuildingRenderer3D` later). The interface is: "given a building type and footprint, produce visuals at this position." The implementation changes; the call site doesn't.
+
+**Cost:** ~1 hour of refactoring now. **Savings:** days of untangling later.
+
+#### Should we abstract the rendering layer?
+
+**Partially.** Full engine abstraction (2D↔3D agnostic renderer) is overkill for an indie game. But a thin separation between "what to render" and "how to render it" is worth it:
+
+- **Map data layer** (permanent): grid positions, building types, prop types, NPC positions — pure data, no rendering
+- **Render layer** (swappable): takes map data, produces visuals — currently 2D sprites, later 3D meshes
+- **Lighting config as data** (permanent): sun angle, ambient colors, glow radii stored in a resource file, not hardcoded in node properties
+
+This is basically MVC for the game world. The model (map data) survives. The view (renderer) gets replaced.
+
+#### File/folder structure considerations
+
+Structure assets by **function**, not by **technology**:
+
+```
+# ✅ DO — survives transition
+assets/
+  buildings/
+    wall_brick/
+    wall_office/
+  props/
+    tree/
+    bench/
+  characters/
+    player/
+    npc_01/
+  ground/
+
+# ❌ DON'T — ties you to 2D
+assets/
+  sprites/
+  nine_slice/
+  normal_maps/
+```
+
+When 3D arrives, `assets/buildings/wall_brick/` gets its `.glb` file alongside (or replacing) its PNGs. The game code referencing `buildings/wall_brick` doesn't care what's inside.
+
+#### Should character style carry into 3D or change?
+
+**Carry it forward — stylized, not photorealistic.** The warm, Ghibli-adjacent, illustrated look translates beautifully into stylized 3D:
+
+- **Cel-shaded / toon-shaded** 3D with the same color palette
+- References: *A Short Hike*, *Ni no Kuni*, *Ooblets*, *Spiritfarer*
+- Character proportions from §6 become the modeling brief directly
+- The "soft features, warm colors, slightly simplified anatomy" direction works identically in 3D
+
+Photorealistic 3D would be a style regression — same uncanny valley problem we're solving now, just in three dimensions.
+
+### 9.5 Why 2D First Is Still the Right Call
+
+We could jump to 3D now. Here's why we don't:
+
+**1. Prototyping speed.** AI can generate a building sprite in 30 seconds. A 3D model takes hours to days. We need to iterate on *what the game looks like* before we invest in permanent assets. 2D lets us try 5 visual directions in the time 3D lets us try 1.
+
+**2. Gameplay validation before art investment.** We don't know if the 320px grid is right. We don't know if the building footprint sizes feel good. We don't know if the camera angle works. Discovering these problems with throwaway 2D sprites costs almost nothing. Discovering them after commissioning 3D models costs everything.
+
+**3. Art direction crystallization.** The color palette, character style, building taxonomy, and prop list all get refined through 2D iteration. By Pre-V2, these are battle-tested design decisions. The 3D artists get a clear, validated brief instead of guesswork.
+
+**4. The game is fun (or not) regardless of art.** If walk-and-talk doesn't feel good, if the economy doesn't balance, if NPC dialogue falls flat — 3D models won't fix it. We need to validate the *game* before polishing the *graphics*. Every successful indie game was fun in placeholder art first.
+
+**5. 70/5 rule.** 70% of art pipeline work is throwaway, but only 5% of game logic work is throwaway. The vast majority of engineering time goes into systems that survive the transition. We're not wasting effort — we're front-loading the permanent work and deferring the expensive art until we know exactly what we need.
+
+**6. Team reality.** We have AI image generation now. We don't have a 3D modeler now. Building with what you have beats waiting for what you don't.
+
+---
+
 ## Status
 
 - [ ] Iteration 0 — Single tile proof of pipeline
@@ -401,6 +549,7 @@ Iterative migration — each iteration adds one layer, is testable on its own, a
 
 ## Changes
 
+- 2026-02-14: Added §9 "3D Model Transition (Pre-V2)" — covers what carries forward, what gets replaced, what's throwaway, design decisions for now, and justification for 2D-first approach. Added ⚠️ 3D transition notes to §3 (lighting), §4 (9-slice), and §6 (character style).
 - 2026-02-14: Rewrote migration plan — replaced 6 vague phases with 7 numbered iterations (iteration 0–6), each with specific deliverables and verification steps. Added Status and Changes sections.
 - 2026-02-14: Initial spec — sections 1–7 (problems, style recommendations, shadow strategy, building system, color palette, character style, AI generation approach)
 
