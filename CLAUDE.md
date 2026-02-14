@@ -33,6 +33,7 @@ startup-game/
 | [docs/documentation-guide.md](docs/documentation-guide.md) | How the documentation system works — formats, workflows, conventions |
 | [docs/version-roadmap.md](docs/version-roadmap.md) | Version breakdown from v0.1 to v1.0 — scope, goals, mechanics per version |
 | [docs/startup-simulator-game-brief.md](docs/startup-simulator-game-brief.md) | Full game vision — the complete design brief (final-state scope) |
+| [KNOWLEDGE.md](KNOWLEDGE.md) | Technical reference — architecture, code anatomy, data structures |
 | [CHANGELOG.md](CHANGELOG.md) | Chronological record of changes |
 | `docs/architecture.md` | System architecture — tech stack, modules, data flow *(created when building starts)* |
 | `docs/workflows/building.md` | Build conventions — iteration model, coding patterns *(created when building starts)* |
@@ -78,6 +79,7 @@ The [full game brief](docs/startup-simulator-game-brief.md) describes the comple
 | What's the full game vision? | [docs/startup-simulator-game-brief.md](docs/startup-simulator-game-brief.md) |
 | What's in each version? | [docs/version-roadmap.md](docs/version-roadmap.md) |
 | How does the doc system work? | [docs/documentation-guide.md](docs/documentation-guide.md) |
+| How does the code work? | [KNOWLEDGE.md](KNOWLEDGE.md) |
 | How was feature X built? | `docs/features/<feature-name>.md` |
 | What changed recently? | [CHANGELOG.md](CHANGELOG.md) |
 | System architecture & tech stack | `docs/architecture.md` *(after building starts)* |
