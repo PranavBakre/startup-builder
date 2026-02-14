@@ -194,56 +194,53 @@ def _draw_roof_tiles(draw, x0, y0, x1, y1, color, dark_color, tile_h=12):
             draw.line([(tx, row_y + tile_h//2), (tx + tile_h, row_y + tile_h//2)], fill=dark_color, width=1)
 
 def _building_base(w, h, roof_color, roof_dark, edge_color, roof_style="flat"):
-    """Create a building footprint with roof, transparent bg."""
-    pad = 40
+    """Create a building tile — fills ENTIRE tile, thick wall border for visibility."""
     img = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    cx, cy = TILE // 2, TILE // 2
-    x0, y0 = cx - w//2, cy - h//2
-    x1, y1 = cx + w//2, cy + h//2
+    border = 8  # thick visible wall border
+    x0, y0 = 0, 0
+    x1, y1 = TILE - 1, TILE - 1
     
-    # Building outline/edge (walls visible at edges from top-down)
-    draw.rectangle([x0-3, y0-3, x1+3, y1+3], fill=edge_color)
+    # Outer wall border — clearly visible
+    draw.rectangle([x0, y0, x1, y1], fill=edge_color)
+    # Inner roof area
+    rx0, ry0 = x0 + border, y0 + border
+    rx1, ry1 = x1 - border, y1 - border
     
     if roof_style == "tiled":
-        draw.rectangle([x0, y0, x1, y1], fill=roof_color)
-        _draw_roof_tiles(draw, x0, y0, x1, y1, roof_color, roof_dark)
+        draw.rectangle([rx0, ry0, rx1, ry1], fill=roof_color)
+        _draw_roof_tiles(draw, rx0, ry0, rx1, ry1, roof_color, roof_dark)
     elif roof_style == "pitched":
-        draw.rectangle([x0, y0, x1, y1], fill=roof_color)
-        _draw_roof_tiles(draw, x0, y0, x1, y1, roof_color, roof_dark)
+        draw.rectangle([rx0, ry0, rx1, ry1], fill=roof_color)
+        _draw_roof_tiles(draw, rx0, ry0, rx1, ry1, roof_color, roof_dark)
         # ridge line
-        draw.line([(cx, y0+10), (cx, y1-10)], fill=roof_dark, width=3)
+        cx = TILE // 2
+        draw.line([(cx, ry0+10), (cx, ry1-10)], fill=roof_dark, width=3)
     elif roof_style == "flat":
-        draw.rectangle([x0, y0, x1, y1], fill=roof_color)
-        noise_fill(draw, x0, y0, x1, y1, roof_color, variance=6)
-        # flat roof edge lip
-        draw.rectangle([x0, y0, x1, y0+4], fill=edge_color)
-        draw.rectangle([x0, y1-4, x1, y1], fill=edge_color)
-        draw.rectangle([x0, y0, x0+4, y1], fill=edge_color)
-        draw.rectangle([x1-4, y0, x1, y1], fill=edge_color)
+        draw.rectangle([rx0, ry0, rx1, ry1], fill=roof_color)
+        noise_fill(draw, rx0, ry0, rx1, ry1, roof_color, variance=6)
     elif roof_style == "glass":
-        draw.rectangle([x0, y0, x1, y1], fill=roof_color)
+        draw.rectangle([rx0, ry0, rx1, ry1], fill=roof_color)
         # glass panel grid
-        for gx in range(x0+8, x1-8, 24):
-            draw.line([(gx, y0), (gx, y1)], fill=edge_color, width=2)
-        for gy in range(y0+8, y1-8, 24):
-            draw.line([(x0, gy), (x1, gy)], fill=edge_color, width=2)
-        # slight variation in panels
-        for gx in range(x0+8, x1-8, 24):
-            for gy in range(y0+8, y1-8, 24):
+        for gx in range(rx0+8, rx1-8, 24):
+            draw.line([(gx, ry0), (gx, ry1)], fill=edge_color, width=2)
+        for gy in range(ry0+8, ry1-8, 24):
+            draw.line([(rx0, gy), (rx1, gy)], fill=edge_color, width=2)
+        for gx in range(rx0+8, rx1-8, 24):
+            for gy in range(ry0+8, ry1-8, 24):
                 if random.random() > 0.6:
                     draw.rectangle([gx+1, gy+1, gx+22, gy+22], fill=PAL["blue_glass_dk"])
     
-    return img, draw, (x0, y0, x1, y1)
+    return img, draw, (rx0, ry0, rx1, ry1)
 
 def gen_wall():
     """Apartment — flat concrete roof with water tank."""
     img, draw, (x0, y0, x1, y1) = _building_base(200, 180, PAL["concrete"], PAL["concrete_dk"], PAL["asphalt_dark"], "flat")
     # water tank
-    tx, ty = x1 - 40, y0 + 20
-    draw.rectangle([tx, ty, tx+30, ty+25], fill=PAL["concrete_dk"])
-    draw.rectangle([tx+2, ty+2, tx+28, ty+23], fill=PAL["blue_glass"])
+    tx, ty = x1 - 50, y0 + 15
+    draw.rectangle([tx, ty, tx+35, ty+28], fill=PAL["concrete_dk"])
+    draw.rectangle([tx+2, ty+2, tx+33, ty+26], fill=PAL["blue_glass"])
     return img
 
 def gen_wall_brick():
@@ -255,8 +252,8 @@ def gen_wall_wood():
     """Shophouse — corrugated metal roof."""
     img, draw, (x0, y0, x1, y1) = _building_base(160, 120, PAL["metal_grey"], PAL["asphalt_dark"], PAL["wood_dark"], "flat")
     # corrugation lines
-    for gy in range(y0+5, y1-5, 6):
-        draw.line([(x0+5, gy), (x1-5, gy)], fill=PAL["concrete_dk"], width=1)
+    for gy in range(y0+3, y1-3, 6):
+        draw.line([(x0+3, gy), (x1-3, gy)], fill=PAL["concrete_dk"], width=1)
     return img
 
 def gen_roof():
@@ -265,27 +262,12 @@ def gen_roof():
     return img
 
 def gen_wall_school():
-    """School — L-shaped flat roof."""
-    img = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+    """School — cream flat roof with border."""
+    img, draw, (x0, y0, x1, y1) = _building_base(200, 180, PAL["cream"], PAL["sand"], PAL["sand"], "flat")
+    # courtyard marking
     cx, cy = TILE//2, TILE//2
-    # L-shape: horizontal bar + vertical bar
-    # horizontal
-    hx0, hy0 = cx-110, cy-80
-    hx1, hy1 = cx+110, cy+10
-    draw.rectangle([hx0-3, hy0-3, hx1+3, hy1+3], fill=PAL["sand"])
-    draw.rectangle([hx0, hy0, hx1, hy1], fill=PAL["cream"])
-    noise_fill(draw, hx0, hy0, hx1, hy1, PAL["cream"], variance=5)
-    # vertical
-    vx0, vy0 = cx-110, cy+10
-    vx1, vy1 = cx-30, cy+90
-    draw.rectangle([vx0-3, vy0-3, vx1+3, vy1+3], fill=PAL["sand"])
-    draw.rectangle([vx0, vy0, vx1, vy1], fill=PAL["cream"])
-    noise_fill(draw, vx0, vy0, vx1, vy1, PAL["cream"], variance=5)
-    # edge lips
-    for rect in [(hx0, hy0, hx1, hy1), (vx0, vy0, vx1, vy1)]:
-        draw.rectangle([rect[0], rect[1], rect[2], rect[1]+3], fill=PAL["sand"])
-        draw.rectangle([rect[0], rect[3]-3, rect[2], rect[3]], fill=PAL["sand"])
+    draw.rectangle([cx-30, cy-30, cx+30, cy+30], fill=PAL["park_light"])
+    draw.rectangle([cx-28, cy-28, cx+28, cy+28], outline=PAL["sand"], width=2)
     return img
 
 def gen_wall_office():
@@ -293,19 +275,16 @@ def gen_wall_office():
     img, draw, (x0, y0, x1, y1) = _building_base(220, 200, PAL["blue_glass"], PAL["blue_glass_dk"], PAL["concrete_dk"], "glass")
     # AC units
     for i in range(3):
-        ax = x0 + 20 + i * 60
-        ay = y0 + 15
-        draw.rectangle([ax, ay, ax+25, ay+18], fill=PAL["concrete_dk"])
-        draw.ellipse([ax+8, ay+4, ax+18, ay+14], fill=PAL["asphalt_dark"])
+        ax = x0 + 15 + i * 80
+        ay = y0 + 12
+        if ax + 25 < x1:
+            draw.rectangle([ax, ay, ax+25, ay+18], fill=PAL["concrete_dk"])
+            draw.ellipse([ax+8, ay+4, ax+18, ay+14], fill=PAL["asphalt_dark"])
     return img
 
 def gen_wall_bungalow():
     """Bungalow — warm tiled pitched roof."""
     img, draw, (x0, y0, x1, y1) = _building_base(200, 170, PAL["terracotta"], PAL["brick"], PAL["cream"], "pitched")
-    # small porch overhang at bottom
-    px0, py0 = TILE//2-30, y1+3
-    draw.rectangle([px0, py0, px0+60, py0+15], fill=PAL["wood"])
-    draw.rectangle([px0+2, py0+2, px0+58, py0+13], fill=PAL["wood_dark"])
     return img
 
 
