@@ -3,15 +3,15 @@
 Sprite Generator for Startup Simulator
 Uses Google Imagen 4 + Gemini Flash to generate game sprites.
 
-Art style: Photorealistic aerial drone photography (satellite/bird's eye view).
-Reference: wall_bungalow.png — warm natural sunlight, lush green grass, tropical
-vegetation, Indian residential neighborhood seen from directly above.
+Art style: Flat illustrated top-down, shadowless, warm palette.
+Clean vector-like illustration with bold outlines and flat color fills.
+Inspired by indie city-builder games — charming, readable at any zoom.
 
 All assets target this consistent look:
-- Ground tiles: seamless tileable aerial photo textures
-- Building tiles: complete structures with surrounding landscaping (Google Earth style)
-- Props: individual objects seen from above, magenta bg for transparency keying
-- Characters: realistic illustrated figures, magenta bg for transparency keying
+- Ground tiles: seamless tileable flat-color textures, no photorealism
+- Building tiles: clean illustrated structures, no shadows, bold outlines
+- Props: individual objects from above, flat colors, magenta bg for keying
+- Characters: illustrated figures, clean outlines, warm skin tones, magenta bg
 - Provider: Supports Google (Imagen/Gemini) and OpenAI (GPT Image 1)
 """
 
@@ -47,44 +47,48 @@ TILE_SIZE = 320
 # =============================================================================
 # STYLE SYSTEM
 # =============================================================================
-# Target: photorealistic aerial drone photography, matching wall_bungalow.png
+# Target: flat illustrated indie game art, shadowless, warm palette
 # - Top-down bird's eye perspective looking straight down
-# - Warm natural sunlight with soft realistic shadows
-# - Indian / Bangalore / Indiranagar neighborhood aesthetic
-# - Lush tropical vegetation (coconut palms, bougainvillea, rain trees)
+# - NO shadows, NO photorealism, NO gradients
+# - Bold dark outlines, flat color fills, clean vector-like look
+# - Warm earthy palette inspired by Bangalore / Indiranagar
+# - Charming, readable at small sizes, consistent across all assets
 #
 # Category-specific approaches:
-# - Ground tiles: seamless tileable aerial photo textures
-# - Buildings: complete structures with surrounding landscaping (Google Earth)
-# - Props: individual objects from above, magenta bg for transparency keying
-# - Characters: realistic illustrated figures, magenta bg for transparency
+# - Ground tiles: flat-color seamless textures with subtle pattern
+# - Buildings: clean illustrated structures, bold outlines, no shadows
+# - Props: flat illustrated objects from above, magenta bg for keying
+# - Characters: illustrated figures, bold outlines, warm skin tones
 #
 # Key constraints:
-# - Ground: soft smooth textures, NOT high-frequency detail (noisy at zoom-out)
-# - Buildings: centered with wide plain grass border, nothing cut off at edges
-# - Props/Characters: object centered, clean magenta bg, no scene context
+# - Everything: NO shadows, NO lighting effects, NO 3D shading
+# - Ground: flat even color with minimal texture variation
+# - Buildings: centered, wide grass border, clean edges
+# - Props/Characters: object centered, clean magenta bg
 # =============================================================================
 
 # Per-category style prefixes
 STYLE_GROUND = (
-    "photorealistic aerial drone photograph, top-down bird's eye view looking "
-    "straight down, warm natural sunlight, soft smooth texture with gentle "
-    "color variation, minimal fine grain detail, low frequency pattern"
+    "flat illustrated top-down game tile, bird's eye view looking straight down, "
+    "NO shadows, NO lighting, flat even color fill with subtle hand-drawn texture, "
+    "bold dark outlines, clean vector art style, seamless tileable, warm muted palette"
 )
 STYLE_BUILDING = (
-    "photorealistic aerial drone photograph, top-down bird's eye view looking "
-    "straight down at a single building, warm natural sunlight with soft shadows, "
-    "building centered in frame with wide plain green grass border on all four "
-    "sides, nothing cut off at the edges of the image, no neighboring buildings "
-    "visible, clean edges that blend with grass, Bangalore India"
+    "flat illustrated top-down game tile, bird's eye view looking straight down "
+    "at a single building, NO shadows, NO 3D shading, bold dark outlines around "
+    "every shape, flat color fills, building centered in frame with wide plain "
+    "green grass border on all four sides, nothing cut off at edges, clean vector "
+    "art style, warm earthy palette, Bangalore India"
 )
 STYLE_PROP = (
-    "photorealistic aerial drone photograph, top-down bird's eye view looking "
-    "straight down, warm natural sunlight, soft shadow cast on ground"
+    "flat illustrated top-down game sprite, bird's eye view looking straight down, "
+    "NO shadows, NO lighting effects, bold dark outlines, flat color fills, "
+    "clean vector art style, warm muted palette"
 )
 STYLE_CHARACTER = (
-    "photorealistic digital illustration, 3/4 front-facing view, warm natural "
-    "lighting, detailed realistic rendering, Indian person from Bangalore"
+    "flat illustrated character sprite, 3/4 front-facing view, NO shadows, "
+    "NO 3D shading, bold dark outlines, flat color fills, clean vector art style, "
+    "warm skin tones, Indian person from Bangalore"
 )
 
 # Shared prompt fragments
