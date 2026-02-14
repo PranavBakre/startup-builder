@@ -291,63 +291,118 @@ Bangalore Indian neighborhood setting, 2D game sprite
 
 ## 8. Migration Plan
 
-### Phase 1: Foundation (Do First)
-**Goal:** Set up the pipeline before replacing any assets.
+Iterative migration — each iteration adds one layer, is testable on its own, and builds on the previous.
 
-- [ ] Write `tools/process_sprites.py` — the post-processing pipeline (bg removal, color correction, palette quantization, resize)
-- [ ] Create the master style reference image
-- [ ] Update prompt templates in `tools/generate_sprites.py` to use shadowless, illustrated style
-- [ ] Set up Godot `Light2D` + `CanvasModulate` in the scene tree (even with old assets, this starts working)
+### Iteration 0 — Single Tile Proof of Pipeline
+**The smallest proof that the new art pipeline works end-to-end.**
 
-### Phase 2: Ground First
-**Goal:** Replace ground tiles — highest visual impact, lowest risk.
+- [ ] Generate ONE `GROUND` tile in the new illustrated/shadowless style using updated prompt templates
+- [ ] Run it through a minimal `tools/process_sprites.py` (background removal + resize to 320px — skip color quantization for now)
+- [ ] Replace the existing `GROUND` sprite in `game/` with the new one
+- [ ] Add a basic `CanvasModulate` node to the scene tree (neutral white — just proves the node works)
+- [ ] Launch the game in Godot. Verify: tile renders, tiles seamlessly, lighting node active, nothing broken
 
-- [ ] Generate 5 ground tile types in new style
-- [ ] Process through pipeline for seamless tiling
-- [ ] Drop into game, verify tiling works
-- [ ] Add `LightOccluder2D` is not needed for ground — just verify lighting looks right
+**Deliverables:** 1 new ground tile PNG, skeleton `process_sprites.py`, `CanvasModulate` in scene tree.
+**Verify:** Screenshot the map — new tile visible, no seams, game runs.
 
-**Milestone:** Map looks cohesive at ground level. Buildings still old style but sitting on correct ground.
+### Iteration 1 — Full Ground Layer
+**All 5 ground tile types in new style, with color pipeline.**
 
-### Phase 3: Buildings
-**Goal:** Implement modular building system and replace building assets.
+- [ ] Create the master style reference image (one Indiranagar street scene in target style)
+- [ ] Generate all 5 ground types (`GROUND`, `GROUND_GRASS`, `GROUND_DIRT`, `GROUND_SAND`, `PARK_GROUND`) using style reference
+- [ ] Add color correction + palette quantization to `process_sprites.py` (§5 palette)
+- [ ] Process all 5 tiles through full pipeline (bg removal → color correct → seamless tile fix → resize)
+- [ ] Replace all ground sprites in game
+- [ ] Add one directional `Light2D` node (sun) — verify ground responds to it
 
-- [ ] Refactor `_render_tiles()` in `world.gd` to use 9-slice building composition instead of single-sprite scaling
-- [ ] Generate 9-slice sets for each building type (7 types × 9 pieces)
-- [ ] Add `LightOccluder2D` per building footprint (auto-generate polygon from bounds)
-- [ ] Test with various footprint sizes
+**Deliverables:** 5 ground tile PNGs, complete `process_sprites.py` with color pipeline, `Light2D` sun node.
+**Verify:** Full map ground looks cohesive. Changing `Light2D` angle visibly affects ground tiles. No seams.
 
-**Milestone:** Buildings look correct at any footprint size. No stretching.
+### Iteration 2 — One Building Type (9-Slice)
+**Prove modular building composition works with one building type.**
 
-### Phase 4: Props
-**Goal:** Replace all 11 prop types.
+- [ ] Pick one building type (`WALL_BRICK` — most common in commercial zones)
+- [ ] Generate full building facade in new style → slice into 9 pieces programmatically (add slicing to `process_sprites.py`)
+- [ ] Refactor `_render_tiles()` in `world.gd` to support 9-slice rendering for `WALL_BRICK` (keep old single-sprite path for other types)
+- [ ] Add `LightOccluder2D` to one `WALL_BRICK` building (manual polygon, proves shadow casting)
+- [ ] Test with at least 2 different footprint sizes (e.g., 2×3 and 4×4)
 
-- [ ] Generate props in new illustrated style (shadowless, consistent palette)
+**Deliverables:** 9 `WALL_BRICK` tile PNGs, 9-slice rendering code in `world.gd`, one `LightOccluder2D` shadow.
+**Verify:** Brick buildings render at multiple footprint sizes without stretching. Sun casts shadow behind the occluded building.
+
+### Iteration 3 — All Building Types
+**Extend 9-slice system to remaining 6 building types.**
+
+- [ ] Generate 9-slice sets for: `WALL_OFFICE`, `WALL_WOOD`, `WALL_BUNGALOW`, `WALL_SCHOOL`, `WALL`, `ROOF` (6 × 9 = 54 tiles)
+- [ ] Process through pipeline with palette enforcement
+- [ ] Remove old single-sprite building path from `_render_tiles()` — all buildings now use 9-slice
+- [ ] Auto-generate `LightOccluder2D` polygons from building bounds (script or helper function, not manual)
+- [ ] Test across all zone types (commercial, residential, institutional)
+
+**Deliverables:** 54 building tile PNGs, auto-occluder generation, old building rendering code removed.
+**Verify:** Walk the full map. Every building renders correctly. No stretching. Shadows cast from all buildings.
+
+### Iteration 4 — Props
+**Replace all 11 prop types in new illustrated style.**
+
+- [ ] Generate all 11 props (`TREE`, `TREE_PINE`, `BUSH`, `FLOWERS`, `BENCH`, `LAMP_POST`, `FENCE`, `FOUNTAIN`, `MAILBOX`, `TRASH_CAN`, `SIGN_SHOP`) — shadowless, consistent palette, transparent background
 - [ ] Process through pipeline
-- [ ] Add `LightOccluder2D` to tall props (trees, lamps)
+- [ ] Add `LightOccluder2D` to tall props (trees, lamp posts, fountain)
+- [ ] Add point `Light2D` to `LAMP_POST` and `SIGN_SHOP` (warm glow, §5 palette `#FFD080`)
 
-### Phase 5: Characters
-**Goal:** Replace player + 5 NPCs.
+**Deliverables:** 11 prop PNGs, occluders on tall props, point lights on lamps/signs.
+**Verify:** Props match building/ground style. Lamp posts glow. Trees cast shadows.
 
-- [ ] Generate character sprites in stylized illustrated style
-- [ ] 4 directions per character (or 2 + horizontal flip)
-- [ ] Test in-game with new lighting
+### Iteration 5 — Characters
+**Replace player + 5 NPCs with stylized illustrated sprites.**
 
-### Phase 6: Polish
-- [ ] Add `CanvasModulate` time-of-day color shifts
-- [ ] Tune `Light2D` parameters (lamp posts, shop signs)
-- [ ] Generate normal maps for key assets (buildings, characters) if pursuing HD-2D depth
-- [ ] Full playtest for visual consistency
+- [ ] Generate player sprite: 4 directions (down, up, left, right) in stylized illustrated style (§6)
+- [ ] Generate 5 NPC sprites: at minimum down-facing + horizontal flip (match §6 specs — diverse, Indiranagar-appropriate)
+- [ ] Process through pipeline (bg removal, color correction, resize)
+- [ ] Drop into game, test with existing dialogue system
+
+**Deliverables:** 4 player direction PNGs, 5+ NPC PNGs.
+**Verify:** Characters match world style. Dialogue still works. No uncanny valley.
+
+### Iteration 6 — Lighting Polish & HD-2D Depth
+**Tune the lighting system and add HD-2D depth effects.**
+
+- [ ] Add `CanvasModulate` time-of-day color presets (warm morning, neutral midday, orange evening) — wire to a debug toggle for now (time-of-day system is v0.3)
+- [ ] Tune `Light2D` parameters: sun intensity, shadow softness, lamp glow radius
+- [ ] Generate normal maps for buildings and characters using Laigter or SpriteIlluminator
+- [ ] Apply normal maps — verify pseudo-3D light response
+- [ ] Full map playtest: walk every zone, check visual consistency
+
+**Deliverables:** Time-of-day presets (debug-togglable), tuned light params, normal maps for key assets.
+**Verify:** Toggle through morning/midday/evening — map looks distinct in each. Normal maps create visible depth under directional light.
 
 ### Timeline Estimate
-- Phase 1: 1 session (pipeline + reference)
-- Phase 2: 1 session (ground tiles)
-- Phase 3: 2-3 sessions (building system refactor + asset gen)
-- Phase 4: 1 session (props)
-- Phase 5: 1 session (characters)
-- Phase 6: 1 session (polish)
+- Iteration 0: < 1 session (proof of pipeline)
+- Iteration 1: 1 session (ground layer)
+- Iteration 2: 1 session (one building type + 9-slice refactor)
+- Iteration 3: 1–2 sessions (remaining buildings)
+- Iteration 4: 1 session (props)
+- Iteration 5: 1 session (characters)
+- Iteration 6: 1 session (lighting polish)
 
-**Total: ~7-8 working sessions across Eva (assets) and Cortana (code changes).**
+**Total: ~7–8 working sessions across Eva (assets) and Cortana (code changes).**
+
+---
+
+## Status
+
+- [ ] Iteration 0 — Single tile proof of pipeline
+- [ ] Iteration 1 — Full ground layer
+- [ ] Iteration 2 — One building type (9-slice)
+- [ ] Iteration 3 — All building types
+- [ ] Iteration 4 — Props
+- [ ] Iteration 5 — Characters
+- [ ] Iteration 6 — Lighting polish & HD-2D depth
+
+## Changes
+
+- 2026-02-14: Rewrote migration plan — replaced 6 vague phases with 7 numbered iterations (iteration 0–6), each with specific deliverables and verification steps. Added Status and Changes sections.
+- 2026-02-14: Initial spec — sections 1–7 (problems, style recommendations, shadow strategy, building system, color palette, character style, AI generation approach)
 
 ---
 
