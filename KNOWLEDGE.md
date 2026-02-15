@@ -8,9 +8,10 @@ How the code works. For project rules, workflow, and version scope, see [CLAUDE.
 
 ### Scene Tree
 ```
-World (Node2D) — world.gd
+World (Node2D) — world.gd (orchestrator)
+├── Camera2D — camera_controller.gd
+├── DialogueManager (Node) — dialogue_manager.gd
 ├── TileMapLayer
-├── Camera2D (follows player, zoom controls)
 ├── Player (Node2D) — player.gd
 │   └── Sprite2D
 ├── NPC × 5 (Area2D) — npc.gd
@@ -23,14 +24,26 @@ World (Node2D) — world.gd
     └── InteractPrompt (Label)
 ```
 
+### Script Responsibilities
+
+| Script | Type | Role |
+|---|---|---|
+| `world.gd` | Node2D | Orchestrator — spawning, movement/collision, NPC interaction, input routing |
+| `map_generator.gd` | class (static) | Pure computation — generates tile_map + buildings arrays |
+| `tile_renderer.gd` | class (static) | Creates Sprite2D nodes from tile_map + buildings data |
+| `dialogue_manager.gd` | Node | Dialogue state, typewriter effect, start/advance/end. Emits `dialogue_ended(npc)` |
+| `camera_controller.gd` | Camera2D | Follow target, smooth zoom, zoom input handling |
+| `player.gd` | Node2D | Grid movement, tween animation, sprite direction |
+| `npc.gd` | Area2D | NPC data storage, texture loading, grid position |
+
 ### Key Constants
 | Constant | Value | Location |
 |----------|-------|----------|
 | TILE_SIZE | 320px | world.gd, player.gd, npc.gd |
 | MAP_SIZE | 60×50 tiles | world.gd |
-| ZOOM_DEFAULT | 0.5 | world.gd |
-| ZOOM_RANGE | 0.05–2.0 | world.gd |
-| CHAR_DELAY | 0.03s | world.gd (typewriter) |
+| ZOOM_DEFAULT | 0.5 | camera_controller.gd |
+| ZOOM_RANGE | 0.05–2.0 | camera_controller.gd |
+| CHAR_DELAY | 0.03s | dialogue_manager.gd |
 | MOVE_DURATION | 0.15s / 0.2s diagonal | player.gd |
 
 ---
@@ -39,7 +52,7 @@ World (Node2D) — world.gd
 
 ### Road Grid
 - **Major roads (2 tiles wide):** 100 Feet Road (y=23-24), CMH Road (x=4-5)
-- **Secondary (1 tile):** 12th Main (x=42), 80 Feet Road (y=40)
+- **Secondary (2 tiles wide):** 12th Main (x=42-43), 80 Feet Road (y=40-41)
 - **Cross streets:** y=7, 14, 19, 30, 36, 46
 - **Main roads:** x=12, 20, 28, 35, 50, 56
 
@@ -58,6 +71,8 @@ Both sides of every road. Major: alternating trees/lamp posts every 2 tiles. Min
 ---
 
 ## Tile Types (23)
+
+Defined in `MapGenerator.TileType` enum. Referenced via `const TileType = MapGenerator.TileType` in world.gd and tile_renderer.gd.
 
 **Walkable (5):** GROUND, GROUND_GRASS, GROUND_DIRT, GROUND_SAND, PARK_GROUND
 
@@ -83,6 +98,35 @@ NPCs use `_find_nearest_walkable()` fallback to ensure walkable spawn positions.
 
 ## Systems
 
+### Map Generation (map_generator.gd)
+`MapGenerator.generate(width, height)` — static function, returns `{tile_map, buildings}`.
+Procedural with fixed seed (42):
+1. Fill with grass
+2. Lay road grid
+3. Border walls
+4. Place buildings in city blocks (zone-based wall types)
+5. Hand-place parks with props
+6. Tree-line all streets
+7. Scatter street furniture, vegetation, dirt paths
+
+### Tile Rendering (tile_renderer.gd)
+`TileRenderer.render(tile_map, buildings, walkable_tiles, tile_size, width, height, parent)` — static function.
+- Each tile → Sprite2D at `(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2)`
+- Props get grass rendered underneath (z_index -2)
+- Buildings rendered as single sprite scaled to full footprint (not per-tile)
+
+### Dialogue (dialogue_manager.gd)
+- `start(npc, lines)` — begins dialogue with given lines
+- `advance()` — skips typewriter or moves to next line
+- `process_typewriter(delta)` — drives character-by-character reveal
+- `is_active()` — whether a dialogue is in progress
+- Emits `dialogue_ended(npc)` when all lines are done
+- UI refs (dialogue_box, labels) set by world.gd in `_ready()`
+
+### Camera (camera_controller.gd)
+- `follow(target_pos, delta)` — follows position with smooth zoom interpolation
+- `handle_input(event)` — zoom via trackpad pinch, mouse wheel, Cmd+/-, Cmd+0
+
 ### Movement (player.gd)
 - Grid-based, one tile per step (scales with zoom: `max(1, round(0.5/zoom))`)
 - Tween animation between tiles (0.15s straight, 0.2s diagonal)
@@ -95,31 +139,10 @@ Walk forward tile-by-tile up to step count, stopping at first obstacle:
 2. Tile walkability check
 3. NPC blocking check
 
-### Dialogue (world.gd)
+### NPC Interaction (world.gd)
 - Adjacent to NPC → bouncing "Press C" prompt
-- C opens dialogue overlay with typewriter effect (0.03s/char)
-- Space/Enter advances or skips typewriter
-- After last line, closes and returns control
-
-### Camera (world.gd)
-- Follows player position with smoothing (speed 10.0)
-- Zoom: trackpad pinch, mouse wheel, Cmd+/-, Cmd+0 (reset)
-- Smooth zoom interpolation via lerp (speed 8.0)
-
-### Map Generation (world.gd → `_generate_map()`)
-Procedural with fixed seed (42):
-1. Fill with grass
-2. Lay road grid
-3. Border walls
-4. Place buildings in city blocks (zone-based wall types)
-5. Hand-place parks with props
-6. Tree-line all streets
-7. Scatter street furniture, vegetation, dirt paths
-
-### Tile Rendering (world.gd → `_render_tiles()`)
-- Each tile → Sprite2D at `(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2)`
-- Props get grass rendered underneath (z_index -2)
-- Buildings rendered as single sprite scaled to full footprint (not per-tile)
+- C triggers `dialogue_manager.start()` with NPC's dialogue lines
+- `dialogue_ended` signal → re-check proximity
 
 ---
 
@@ -131,12 +154,6 @@ Procedural with fixed seed (42):
 - Magenta bg removal for transparency (Google); native transparency (OpenAI)
 - Output: 1024×1024 PNG → scaled to 320px in game
 - Run: `cd tools && uv run python generate_sprites.py [--provider openai]`
-
----
-
-## Code Health Notes
-
-⚠️ **world.gd is monolithic (~500 lines)** — handles map gen, tile rendering, NPC spawning, dialogue, camera, input, and movement. Consider refactoring into separate systems before it grows further with v0.2+ features.
 
 ---
 
