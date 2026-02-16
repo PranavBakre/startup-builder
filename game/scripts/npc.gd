@@ -48,3 +48,16 @@ func update_world_position():
 
 func get_grid_position() -> Vector2i:
 	return grid_pos
+
+var checkmark: Label = null
+
+func show_checkmark():
+	if checkmark != null:
+		return
+	checkmark = Label.new()
+	checkmark.text = "✓"
+	checkmark.add_theme_font_size_override("font_size", 64)
+	checkmark.add_theme_color_override("font_color", Color(0.2, 0.9, 0.4))
+	checkmark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	checkmark.position = Vector2(-20, -TILE_SIZE * 0.7)
+	add_child(checkmark)

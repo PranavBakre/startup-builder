@@ -312,6 +312,11 @@ func _check_npc_proximity():
 	if adjacent_npc != null:
 		if not interact_prompt.visible:
 			prompt_bounce_time = 0.0
+		# Change prompt text for already-talked NPCs
+		if talked_to.has(adjacent_npc.npc_id):
+			interact_prompt.text = "Press C to chat again"
+		else:
+			interact_prompt.text = "Press C to chat"
 		interact_prompt.visible = true
 		var npc_world_pos = adjacent_npc.position
 		var base_y = npc_world_pos.y - TILE_SIZE * 0.6
@@ -362,6 +367,8 @@ func _on_dialogue_ended(npc: NPC):
 				"description": npc.problem.get("description", ""),
 				"category": npc.problem.get("category", "")
 			})
+			# Show checkmark on NPC
+			npc.show_checkmark()
 
 	_check_npc_proximity()
 
@@ -447,6 +454,16 @@ func _populate_journal():
 	# Clear existing entries
 	for child in journal_list.get_children():
 		child.queue_free()
+
+	if company_founded:
+		var company_info = Label.new()
+		company_info.text = "Company: " + company_name + " | Problem: " + selected_problem.get("description", "")
+		company_info.add_theme_color_override("font_color", Color(0.2, 0.9, 0.4))
+		company_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		journal_list.add_child(company_info)
+
+		var separator = HSeparator.new()
+		journal_list.add_child(separator)
 
 	if discovered_problems.size() == 0:
 		var empty_label = Label.new()
@@ -549,23 +566,43 @@ func _on_name_input_gui(event: InputEvent):
 func _create_hud():
 	hud_panel = Panel.new()
 	hud_panel.visible = false
-	hud_panel.anchors_preset = Control.PRESET_TOP_WIDE
 	hud_panel.anchor_right = 1.0
-	hud_panel.offset_bottom = 40.0
+	hud_panel.offset_bottom = 50.0
+
+	var hud_style = StyleBoxFlat.new()
+	hud_style.bg_color = Color(0.08, 0.08, 0.12, 0.9)
+	hud_style.border_width_bottom = 2
+	hud_style.border_color = Color(0.2, 0.2, 0.3)
+	hud_panel.add_theme_stylebox_override("panel", hud_style)
 	$CanvasLayer.add_child(hud_panel)
 
+	var hbox = HBoxContainer.new()
+	hbox.anchors_preset = Control.PRESET_FULL_RECT
+	hbox.anchor_right = 1.0
+	hbox.anchor_bottom = 1.0
+	hbox.add_theme_constant_override("separation", 0)
+	hud_panel.add_child(hbox)
+
+	var left_margin = MarginContainer.new()
+	left_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_margin.add_theme_constant_override("margin_left", 16)
+	hbox.add_child(left_margin)
+
 	hud_company_label = Label.new()
-	hud_company_label.anchors_preset = Control.PRESET_CENTER_LEFT
-	hud_company_label.offset_left = 10.0
-	hud_company_label.text = ""
-	hud_panel.add_child(hud_company_label)
+	hud_company_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hud_company_label.add_theme_font_size_override("font_size", 20)
+	hud_company_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	left_margin.add_child(hud_company_label)
+
+	var right_margin = MarginContainer.new()
+	right_margin.add_theme_constant_override("margin_right", 16)
+	hbox.add_child(right_margin)
 
 	hud_cash_label = Label.new()
-	hud_cash_label.anchors_preset = Control.PRESET_CENTER_RIGHT
-	hud_cash_label.offset_right = -10.0
-	hud_cash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hud_cash_label.text = ""
-	hud_panel.add_child(hud_cash_label)
+	hud_cash_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hud_cash_label.add_theme_font_size_override("font_size", 20)
+	hud_cash_label.add_theme_color_override("font_color", Color(0.3, 0.9, 0.4))
+	right_margin.add_child(hud_cash_label)
 
 	# "Founded!" confirmation label
 	founded_label = Label.new()
