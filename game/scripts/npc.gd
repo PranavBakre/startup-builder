@@ -7,6 +7,8 @@ var npc_name: String
 var grid_pos: Vector2i
 var dialogue: Array  # Untyped array to avoid assignment errors
 var problem: Dictionary
+var follow_up: String = ""
+var post_founding: String = ""
 
 # Tile size (must match world's TILE_SIZE)
 const TILE_SIZE = 320
@@ -23,6 +25,8 @@ func setup(data: Dictionary):
 	grid_pos = data.get("position", Vector2i(0, 0))
 	dialogue = data.get("dialogue", [])
 	problem = data.get("problem", {})
+	follow_up = data.get("follow_up", "We already talked about this.")
+	post_founding = data.get("post_founding", "Good luck with your company!")
 
 	# Load appropriate texture based on NPC ID
 	var texture_path = "res://assets/characters/npc_" + npc_id + ".png"

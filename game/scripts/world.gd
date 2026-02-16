@@ -42,7 +42,9 @@ var npc_data = [
 		"problem": {
 			"description": "Expense tracking apps too complex for freelancers",
 			"category": "productivity"
-		}
+		},
+		"follow_up": "Any luck with that expense tracking idea?",
+		"post_founding": "Nice, you started a company! Hope it works out."
 	},
 	{
 		"id": "jordan",
@@ -57,7 +59,9 @@ var npc_data = [
 		"problem": {
 			"description": "No good way to organize and share research notes with team",
 			"category": "education"
-		}
+		},
+		"follow_up": "Still thinking about that research notes problem?",
+		"post_founding": "Oh cool, you founded a company! Good luck with it."
 	},
 	{
 		"id": "maya",
@@ -72,7 +76,9 @@ var npc_data = [
 		"problem": {
 			"description": "Small business needs simple, affordable online ordering",
 			"category": "local-business"
-		}
+		},
+		"follow_up": "I'm still waiting for a simple online ordering solution...",
+		"post_founding": "You started a company? That's exciting! Come back for cake."
 	},
 	{
 		"id": "sam",
@@ -87,7 +93,9 @@ var npc_data = [
 		"problem": {
 			"description": "Small service businesses need affordable appointment booking",
 			"category": "local-business"
-		}
+		},
+		"follow_up": "Still looking for that affordable booking tool, you know anyone?",
+		"post_founding": "A startup, huh? Let me know if you need a haircut to celebrate."
 	},
 	{
 		"id": "priya",
@@ -102,7 +110,9 @@ var npc_data = [
 		"problem": {
 			"description": "Teachers need a simple way to communicate with parents",
 			"category": "education"
-		}
+		},
+		"follow_up": "The parent communication situation hasn't improved, sadly.",
+		"post_founding": "You founded a company! I hope it helps people like me."
 	}
 ]
 
@@ -135,6 +145,7 @@ var founding_npc_id: String = ""
 var hud_panel: Panel
 var hud_company_label: Label
 var hud_cash_label: Label
+var founded_label: Label
 
 # Subsystem references
 @onready var dialogue_manager: DialogueManager = $DialogueManager
@@ -331,8 +342,10 @@ func _try_interact():
 		interact_prompt.visible = false
 		# Pick dialogue lines based on state
 		var lines: Array
-		if talked_to.has(adjacent_npc.npc_id):
-			lines = ["We already talked about this."]
+		if company_founded:
+			lines = [adjacent_npc.post_founding]
+		elif talked_to.has(adjacent_npc.npc_id):
+			lines = [adjacent_npc.follow_up]
 		else:
 			lines = adjacent_npc.dialogue.duplicate()
 		dialogue_manager.start(adjacent_npc, lines)
@@ -361,10 +374,24 @@ func _create_journal_ui():
 	journal_panel.anchors_preset = Control.PRESET_FULL_RECT
 	journal_panel.anchor_right = 1.0
 	journal_panel.anchor_bottom = 1.0
-	journal_panel.offset_left = 40.0
-	journal_panel.offset_top = 40.0
-	journal_panel.offset_right = -40.0
-	journal_panel.offset_bottom = -40.0
+	journal_panel.offset_left = 60.0
+	journal_panel.offset_top = 60.0
+	journal_panel.offset_right = -60.0
+	journal_panel.offset_bottom = -60.0
+
+	# Dark semi-transparent background
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	panel_style.corner_radius_top_left = 8
+	panel_style.corner_radius_top_right = 8
+	panel_style.corner_radius_bottom_left = 8
+	panel_style.corner_radius_bottom_right = 8
+	panel_style.border_width_left = 2
+	panel_style.border_width_top = 2
+	panel_style.border_width_right = 2
+	panel_style.border_width_bottom = 2
+	panel_style.border_color = Color(0.3, 0.3, 0.4)
+	journal_panel.add_theme_stylebox_override("panel", panel_style)
 	$CanvasLayer.add_child(journal_panel)
 
 	var margin = MarginContainer.new()
@@ -401,6 +428,7 @@ func _create_journal_ui():
 	company_name_input.visible = false
 	company_name_input.placeholder_text = "Enter company name..."
 	company_name_input.text_submitted.connect(_on_company_name_submitted)
+	company_name_input.gui_input.connect(_on_name_input_gui)
 	journal_vbox.add_child(company_name_input)
 
 func _open_journal():
@@ -423,17 +451,54 @@ func _populate_journal():
 	if discovered_problems.size() == 0:
 		var empty_label = Label.new()
 		empty_label.text = "No problems discovered yet"
+		empty_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		journal_list.add_child(empty_label)
 		return
 
 	for problem in discovered_problems:
-		var row = HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var card = PanelContainer.new()
+		var card_style = StyleBoxFlat.new()
+		card_style.bg_color = Color(0.15, 0.15, 0.2, 0.9)
+		card_style.corner_radius_top_left = 4
+		card_style.corner_radius_top_right = 4
+		card_style.corner_radius_bottom_left = 4
+		card_style.corner_radius_bottom_right = 4
+		card_style.content_margin_left = 12.0
+		card_style.content_margin_top = 8.0
+		card_style.content_margin_right = 12.0
+		card_style.content_margin_bottom = 8.0
 
-		var text_label = Label.new()
-		text_label.text = problem.npc_name + ": " + problem.description
-		text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(text_label)
+		# Highlight selected problem
+		if company_founded and selected_problem.get("npc_id") == problem.npc_id:
+			card_style.border_width_left = 2
+			card_style.border_width_top = 2
+			card_style.border_width_right = 2
+			card_style.border_width_bottom = 2
+			card_style.border_color = Color(0.2, 0.8, 0.4)
+
+		card.add_theme_stylebox_override("panel", card_style)
+
+		var row = HBoxContainer.new()
+
+		var info_vbox = VBoxContainer.new()
+		info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		var name_label = Label.new()
+		name_label.text = problem.npc_name
+		name_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+		info_vbox.add_child(name_label)
+
+		var desc_label = Label.new()
+		desc_label.text = problem.description
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info_vbox.add_child(desc_label)
+
+		var cat_label = Label.new()
+		cat_label.text = "[" + problem.category + "]"
+		cat_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.7))
+		info_vbox.add_child(cat_label)
+
+		row.add_child(info_vbox)
 
 		if not company_founded:
 			var found_btn = Button.new()
@@ -441,7 +506,8 @@ func _populate_journal():
 			found_btn.pressed.connect(_on_found_company_pressed.bind(problem.npc_id))
 			row.add_child(found_btn)
 
-		journal_list.add_child(row)
+		card.add_child(row)
+		journal_list.add_child(card)
 
 func _on_found_company_pressed(npc_id: String):
 	founding_npc_id = npc_id
@@ -463,6 +529,20 @@ func _on_company_name_submitted(text: String):
 	company_name_input.visible = false
 	_close_journal()
 	_update_hud()
+	# Show "Founded!" briefly
+	founded_label.visible = true
+	founded_label.modulate.a = 1.0
+	var tween = create_tween()
+	tween.tween_interval(1.5)
+	tween.tween_property(founded_label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func(): founded_label.visible = false; founded_label.modulate.a = 1.0)
+
+func _on_name_input_gui(event: InputEvent):
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		company_name_input.visible = false
+		company_name_input.text = ""
+		founding_npc_id = ""
+		get_viewport().set_input_as_handled()
 
 # === HUD ===
 
@@ -486,6 +566,19 @@ func _create_hud():
 	hud_cash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hud_cash_label.text = ""
 	hud_panel.add_child(hud_cash_label)
+
+	# "Founded!" confirmation label
+	founded_label = Label.new()
+	founded_label.visible = false
+	founded_label.text = "Founded!"
+	founded_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	founded_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	founded_label.anchors_preset = Control.PRESET_CENTER
+	founded_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	founded_label.grow_vertical = Control.GROW_DIRECTION_BOTH
+	founded_label.add_theme_font_size_override("font_size", 48)
+	founded_label.add_theme_color_override("font_color", Color(0.2, 0.9, 0.4))
+	$CanvasLayer.add_child(founded_label)
 
 func _update_hud():
 	if company_founded:
