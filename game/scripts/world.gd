@@ -146,6 +146,7 @@ var hud_panel: Panel
 var hud_company_label: Label
 var hud_cash_label: Label
 var founded_label: Label
+var controls_hint: Label
 
 # Subsystem references
 @onready var dialogue_manager: DialogueManager = $DialogueManager
@@ -173,6 +174,7 @@ func _ready():
 
 	_create_journal_ui()
 	_create_hud()
+	_create_controls_hint()
 
 func _spawn_player():
 	var player_scene = preload("res://scenes/player.tscn")
@@ -318,12 +320,14 @@ func _check_npc_proximity():
 		else:
 			interact_prompt.text = "Press C to chat"
 		interact_prompt.visible = true
+		# Convert NPC world position to screen position
 		var npc_world_pos = adjacent_npc.position
-		var base_y = npc_world_pos.y - TILE_SIZE * 0.6
+		var canvas_xform = get_viewport().get_canvas_transform()
+		var screen_pos = canvas_xform * npc_world_pos
 		var bounce_offset = sin(prompt_bounce_time) * BOUNCE_AMOUNT
 		interact_prompt.position = Vector2(
-			npc_world_pos.x + TILE_SIZE / 2.0 - 50,
-			base_y + bounce_offset
+			screen_pos.x - interact_prompt.size.x / 2.0,
+			screen_pos.y - 60 + bounce_offset
 		)
 	else:
 		interact_prompt.visible = false
@@ -624,3 +628,21 @@ func _update_hud():
 		hud_cash_label.text = "$" + str(company_cash)
 	else:
 		hud_panel.visible = false
+
+# === Controls Hint ===
+
+func _create_controls_hint():
+	controls_hint = Label.new()
+	controls_hint.text = "C: Chat  |  Tab: Journal"
+	controls_hint.anchor_left = 1.0
+	controls_hint.anchor_top = 1.0
+	controls_hint.anchor_right = 1.0
+	controls_hint.anchor_bottom = 1.0
+	controls_hint.offset_left = -220.0
+	controls_hint.offset_top = -40.0
+	controls_hint.offset_right = -10.0
+	controls_hint.offset_bottom = -10.0
+	controls_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls_hint.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 0.6))
+	controls_hint.add_theme_font_size_override("font_size", 14)
+	$CanvasLayer.add_child(controls_hint)
