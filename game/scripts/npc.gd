@@ -7,6 +7,8 @@ var npc_name: String
 var grid_pos: Vector2i
 var dialogue: Array  # Untyped array to avoid assignment errors
 var problem: Dictionary
+var follow_up: String = ""
+var post_founding: String = ""
 
 # Tile size (must match world's TILE_SIZE)
 const TILE_SIZE = 320
@@ -23,6 +25,8 @@ func setup(data: Dictionary):
 	grid_pos = data.get("position", Vector2i(0, 0))
 	dialogue = data.get("dialogue", [])
 	problem = data.get("problem", {})
+	follow_up = data.get("follow_up", "We already talked about this.")
+	post_founding = data.get("post_founding", "Good luck with your company!")
 
 	# Load appropriate texture based on NPC ID
 	var texture_path = "res://assets/characters/npc_" + npc_id + ".png"
@@ -44,3 +48,16 @@ func update_world_position():
 
 func get_grid_position() -> Vector2i:
 	return grid_pos
+
+var checkmark: Label = null
+
+func show_checkmark():
+	if checkmark != null:
+		return
+	checkmark = Label.new()
+	checkmark.text = "✓"
+	checkmark.add_theme_font_size_override("font_size", 64)
+	checkmark.add_theme_color_override("font_color", Color(0.2, 0.9, 0.4))
+	checkmark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	checkmark.position = Vector2(-20, -TILE_SIZE * 0.7)  # TODO: -20 is a magic number, derive from sprite width
+	add_child(checkmark)

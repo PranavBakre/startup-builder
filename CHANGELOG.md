@@ -63,3 +63,12 @@ All notable changes to this project are documented here. Entries use `@features`
 
 - **Walk & Talk feature doc rewritten** — Complete rewrite of walk-and-talk.md to reflect Indiranagar rework: updated map layout, NPC table, camera section, movement section, sprite generation docs, code index, iteration 4 documentation. All acceptance criteria checked. @features walk-and-talk documentation
   - Files changed: `docs/features/walk-and-talk.md`
+
+---
+
+## 2026-02-16
+
+### Added
+
+- **v0.2 "The Idea" — Problem collection + company founding** — Talk to NPCs to discover startup problems, review them in a Tab-toggled journal, select a problem and name your company. 3-layer NPC dialogue (first talk / follow-up / post-founding). Styled dark journal with problem cards (NPC name, description, category). "Founded!" confirmation with fade-out tween. Styled HUD bar with company name and $100k cash. Green checkmarks above collected NPCs. Persistent controls hint. World-to-screen coordinate fix for interact prompt. @features the-idea problem-journal company-founding hud npc-dialogue
+  - Files changed: `game/scripts/world.gd`, `game/scripts/npc.gd`

@@ -60,95 +60,83 @@ The cash balance is static in v0.2 — no income or expenses exist yet (v0.3 int
 
 ### Multi-layer NPC Dialogue
 
-NPCs currently have a flat `dialogue` array that plays once. v0.2 changes this:
+NPCs have three dialogue layers:
 
 - **First talk:** Full dialogue plays (surfaces the problem). Problem auto-collected on completion.
 - **Re-talk:** A short 1-line follow-up plays instead (e.g. "Any thoughts on that ordering problem?"). No re-collection.
 - **After founding:** NPC acknowledges the player's company with a 1-line reaction (e.g. "Nice, you started a company! Good luck."). Same line every time.
 
-This requires adding `follow_up` and `post_founding` fields to NPC data.
-
 ### Map Indicators
 
-- NPCs whose problem has been collected show a small checkmark icon above their head (replaces the "Press C" prompt when adjacent and already collected)
-- No other map changes in v0.2
+- NPCs whose problem has been collected show a green "✓" checkmark above their head
+- Adjacent to collected NPCs, prompt reads "Press C to chat again" instead of "Press C to chat"
+- Persistent controls hint at bottom-right: "C: Chat | Tab: Journal"
 
-## Implementation Plan
+## Code Index
 
-### Iteration 0 — Problem Collection + Founding Proof
+### Files Modified
 
-**Core mechanic proof wired into the existing game.**
+| File | Changes |
+|---|---|
+| `game/scripts/world.gd` | State vars, journal UI, HUD, controls hint, problem collection, 3-layer dialogue, founding flow, prompt positioning fix |
+| `game/scripts/npc.gd` | Added `follow_up`, `post_founding` vars + `show_checkmark()` |
 
-Integrate into the existing v0.1 game at its simplest:
-1. Add a `discovered_problems: Array` to world.gd
-2. On `_end_dialogue()`, if the NPC's problem hasn't been collected yet, add it to the array
-3. Press Tab → show a simple Panel listing collected problems (plain Labels, no styling)
-4. Each problem row has a "Found Company" button
-5. Clicking it → hardcoded text input for company name → pressing Enter stores the name
-6. Two Labels appear at the top of the screen: company name + "$100,000"
-7. Re-talking to an NPC whose problem is already collected shows a hardcoded "We already talked about this" line
+### State Variables (world.gd)
 
-**What iteration 0 does NOT have:**
-- No styled journal UI (plain Labels only)
-- No categories displayed
-- No "Founded!" animation or confirmation
-- No post-founding NPC dialogue changes
-- No checkmark indicators on NPCs
-- No "close journal" polish
-
-**Proves:** Problems collect from dialogue → journal displays them → player selects and founds → HUD shows result.
-
-### Iteration 1 — Journal UI + NPC Dialogue Layers
-
-1. Style the journal panel (dark background, problem cards, category labels, NPC source)
-2. Add NPC `follow_up` dialogue for re-talks
-3. Add NPC `post_founding` dialogue line
-4. Track first-talk vs re-talk state per NPC
-5. "Founded!" text confirmation on screen (brief, fades out)
-6. Company name input with cancel support (Escape)
-
-### Iteration 2 — HUD + Map Polish
-
-1. Persistent HUD bar (top of screen, styled, company name + cash)
-2. Checkmark icon above NPCs whose problem has been collected
-3. Journal shows which problem was selected (highlight or label)
-4. Disable "Found Company" buttons after founding
-5. Journal accessible before and after founding (review-only after)
-
-## Data Changes
-
-### NPC Data (world.gd)
-
-Current structure:
 ```gdscript
-{
-  "id": "alex",
-  "name": "Alex",
-  "position": Vector2i(25, 23),
-  "dialogue": ["Line 1", "Line 2", ...],
-  "problem": { "description": "...", "category": "productivity" }
-}
+var discovered_problems: Array = []    # [{npc_id, npc_name, description, category}]
+var talked_to: Dictionary = {}          # {npc_id: true}
+var company_name: String = ""
+var company_cash: int = 100000
+var selected_problem: Dictionary = {}
+var company_founded: bool = false
+var journal_open: bool = false
 ```
 
-v0.2 additions:
+### NPC Data (world.gd npc_data)
+
+Each NPC dict now includes:
 ```gdscript
-{
-  ...
-  "follow_up": "Any luck with that expense tracking idea?",
-  "post_founding": "Nice, you started a company! Hope it works out."
-}
+"follow_up": "Any luck with that expense tracking idea?",
+"post_founding": "Nice, you started a company! Hope it works out."
 ```
 
-### Game State (world.gd)
+### NPC Script (npc.gd)
 
-New state variables:
+Added:
 ```gdscript
-var discovered_problems: Array = []   # Array of problem dicts
-var company_name: String = ""          # Empty until founded
-var company_cash: int = 100000         # Starting capital
-var selected_problem: Dictionary = {}  # The chosen problem
-var talked_to: Dictionary = {}         # { npc_id: true } tracks first-talk
+var follow_up: String = ""
+var post_founding: String = ""
+func show_checkmark()  # Adds green "✓" Label above NPC sprite
 ```
+
+### Key Functions (world.gd)
+
+| Function | Purpose |
+|---|---|
+| `_create_journal_ui()` | Builds styled journal panel in code (dark bg, rounded corners) |
+| `_open_journal()` / `_close_journal()` | Toggle journal visibility + populate |
+| `_populate_journal()` | Clears and rebuilds problem cards; shows company info header if founded |
+| `_on_found_company_pressed(npc_id)` | Shows company name LineEdit |
+| `_on_company_name_submitted(text)` | Founds company, closes journal, shows HUD + "Founded!" tween |
+| `_on_name_input_gui(event)` | Handles Escape in LineEdit via gui_input signal |
+| `_create_hud()` | Builds styled HUD bar + "Founded!" label |
+| `_update_hud()` | Shows/hides HUD with company name and cash |
+| `_create_controls_hint()` | Persistent bottom-right keybindings hint |
+| `_on_dialogue_ended(npc)` | Tracks talked_to, collects problem, shows checkmark |
+| `_try_interact()` | 3-layer dialogue selection (first talk / follow_up / post_founding) |
+| `_check_npc_proximity()` | World-to-screen coordinate conversion for prompt; dynamic prompt text |
+
+### Input Handling
+
+`_input()` priority chain:
+1. Tab → toggle journal (blocked during dialogue)
+2. Escape → close journal or cancel naming
+3. Dialogue active → advance dialogue
+4. Journal open → block other input
+5. Normal → interact, camera zoom
+
+Movement blocked during both dialogue and journal (`_process()`).
 
 ## Deferred / Cut
 
@@ -163,26 +151,24 @@ var talked_to: Dictionary = {}         # { npc_id: true } tracks first-talk
 
 ## Acceptance Criteria (Full v0.2)
 
-- [ ] Completing an NPC's dialogue for the first time adds their problem to the journal
-- [ ] Re-talking to an NPC plays a follow-up line instead of repeating the problem
-- [ ] Pressing Tab opens the problem journal panel
-- [ ] Journal lists all collected problems with NPC name, description, and category
-- [ ] Journal shows "No problems discovered yet" when empty
-- [ ] Selecting a problem prompts for a company name
-- [ ] Entering a name and confirming founds the company
-- [ ] Cancel (Escape) aborts founding without side effects
-- [ ] A "Founded!" confirmation appears briefly after founding
-- [ ] HUD shows company name and $100,000 after founding
-- [ ] HUD is not visible before founding
-- [ ] After founding, journal still works but "Found Company" buttons are gone
-- [ ] After founding, NPCs give a post-founding acknowledgment line
-- [ ] Collected NPCs show a checkmark indicator on the map
-- [ ] The game still runs and v0.1 features (movement, collision, zoom, dialogue) are unbroken
+- [x] Completing an NPC's dialogue for the first time adds their problem to the journal
+- [x] Re-talking to an NPC plays a follow-up line instead of repeating the problem
+- [x] Pressing Tab opens the problem journal panel
+- [x] Journal lists all collected problems with NPC name, description, and category
+- [x] Journal shows "No problems discovered yet" when empty
+- [x] Selecting a problem prompts for a company name
+- [x] Entering a name and confirming founds the company
+- [x] Cancel (Escape) aborts founding without side effects
+- [x] A "Founded!" confirmation appears briefly after founding
+- [x] HUD shows company name and $100,000 after founding
+- [x] HUD is not visible before founding
+- [x] After founding, journal still works but "Found Company" buttons are gone
+- [x] After founding, NPCs give a post-founding acknowledgment line
+- [x] Collected NPCs show a checkmark indicator on the map
+- [x] The game still runs and v0.1 features (movement, collision, zoom, dialogue) are unbroken
 
 ## Changes
 
 - 2026-02-13: Initial documentation (pre-build)
-- 2026-02-13: Design discussion — mobile controls (Tab to open journal) deferred to v0.3 which will add virtual joystick + on-screen buttons for all interactions
-- 2026-02-13: Design discussion — company name accepts any input, no validation or profanity filter (profanity filter deferred to v2)
-- 2026-02-13: Design discussion — founding is intentionally irreversible, no undo or confirmation dialog (undo deferred to v2)
-- 2026-02-13: Design discussion — considering extracting game state from world.gd into a GameState autoload singleton to centralize persistent state and simplify v0.3 save/load (decision pending)
+- 2026-02-13: Design discussions — mobile controls deferred to v0.3, no name validation, founding irreversible, GameState autoload deferred to v0.3
+- 2026-02-16: v0.2 implementation complete — all 3 iterations built, all acceptance criteria met
