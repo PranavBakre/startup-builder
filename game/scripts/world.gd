@@ -111,6 +111,31 @@ var prompt_bounce_time: float = 0.0
 const BOUNCE_SPEED = 3.0
 const BOUNCE_AMOUNT = 5.0
 
+# === v0.2 State ===
+var discovered_problems: Array = []
+var talked_to: Dictionary = {}
+var company_name: String = ""
+var company_cash: int = 100000
+var selected_problem: Dictionary = {}
+var company_founded: bool = false
+
+# Journal state
+var journal_open: bool = false
+
+# Journal UI (created in _ready)
+var journal_panel: Panel
+var journal_vbox: VBoxContainer
+var journal_title_label: Label
+var journal_scroll: ScrollContainer
+var journal_list: VBoxContainer
+var company_name_input: LineEdit
+var founding_npc_id: String = ""
+
+# HUD references (created in _ready)
+var hud_panel: Panel
+var hud_company_label: Label
+var hud_cash_label: Label
+
 # Subsystem references
 @onready var dialogue_manager: DialogueManager = $DialogueManager
 @onready var camera: CameraController = $Camera2D
@@ -134,6 +159,9 @@ func _ready():
 	dialogue_manager.npc_name_label = $CanvasLayer/DialogueBox/MarginContainer/VBoxContainer/NPCName
 	dialogue_manager.dialogue_text_label = $CanvasLayer/DialogueBox/MarginContainer/VBoxContainer/DialogueText
 	dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
+
+	_create_journal_ui()
+	_create_hud()
 
 func _spawn_player():
 	var player_scene = preload("res://scenes/player.tscn")
@@ -175,8 +203,8 @@ func _process(delta):
 	# Dialogue typewriter
 	dialogue_manager.process_typewriter(delta)
 
-	# Movement (blocked during dialogue)
-	if not dialogue_manager.is_active() and player and not player.is_moving:
+	# Movement (blocked during dialogue and journal)
+	if not dialogue_manager.is_active() and not journal_open and player and not player.is_moving:
 		var direction = Vector2i.ZERO
 		if Input.is_action_pressed("ui_up"):
 			direction.y = -1
@@ -198,10 +226,35 @@ func _process(delta):
 # === Input ===
 
 func _input(event):
+	# Journal toggle (Tab key) — blocked during dialogue
+	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
+		if not dialogue_manager.is_active():
+			if journal_open:
+				_close_journal()
+			else:
+				_open_journal()
+			return
+
+	# Close journal with Escape
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if journal_open:
+			if company_name_input.visible:
+				# Cancel naming
+				company_name_input.visible = false
+				company_name_input.text = ""
+				founding_npc_id = ""
+			else:
+				_close_journal()
+			return
+
 	# Dialogue mode
 	if dialogue_manager.is_active():
 		if event.is_action_pressed("ui_accept") or event.is_action_pressed("interact"):
 			dialogue_manager.advance()
+		return
+
+	# Block other input while journal is open
+	if journal_open:
 		return
 
 	# Interact
@@ -276,7 +329,168 @@ func _try_interact():
 	var adjacent_npc = _get_adjacent_npc()
 	if adjacent_npc != null:
 		interact_prompt.visible = false
-		dialogue_manager.start(adjacent_npc, adjacent_npc.dialogue.duplicate())
+		# Pick dialogue lines based on state
+		var lines: Array
+		if talked_to.has(adjacent_npc.npc_id):
+			lines = ["We already talked about this."]
+		else:
+			lines = adjacent_npc.dialogue.duplicate()
+		dialogue_manager.start(adjacent_npc, lines)
 
-func _on_dialogue_ended(_npc: NPC):
+func _on_dialogue_ended(npc: NPC):
+	# Track that we've talked to this NPC
+	if not talked_to.has(npc.npc_id):
+		talked_to[npc.npc_id] = true
+		# Collect problem
+		if npc.problem.size() > 0:
+			discovered_problems.append({
+				"npc_id": npc.npc_id,
+				"npc_name": npc.npc_name,
+				"description": npc.problem.get("description", ""),
+				"category": npc.problem.get("category", "")
+			})
+
 	_check_npc_proximity()
+
+# === Journal ===
+
+func _create_journal_ui():
+	# Main panel — full screen overlay with margin
+	journal_panel = Panel.new()
+	journal_panel.visible = false
+	journal_panel.anchors_preset = Control.PRESET_FULL_RECT
+	journal_panel.anchor_right = 1.0
+	journal_panel.anchor_bottom = 1.0
+	journal_panel.offset_left = 40.0
+	journal_panel.offset_top = 40.0
+	journal_panel.offset_right = -40.0
+	journal_panel.offset_bottom = -40.0
+	$CanvasLayer.add_child(journal_panel)
+
+	var margin = MarginContainer.new()
+	margin.anchors_preset = Control.PRESET_FULL_RECT
+	margin.anchor_right = 1.0
+	margin.anchor_bottom = 1.0
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	journal_panel.add_child(margin)
+
+	journal_vbox = VBoxContainer.new()
+	journal_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	journal_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(journal_vbox)
+
+	# Title
+	journal_title_label = Label.new()
+	journal_title_label.text = "Problem Journal"
+	journal_vbox.add_child(journal_title_label)
+
+	# Scrollable list area
+	journal_scroll = ScrollContainer.new()
+	journal_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	journal_vbox.add_child(journal_scroll)
+
+	journal_list = VBoxContainer.new()
+	journal_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	journal_scroll.add_child(journal_list)
+
+	# Company name input (hidden by default)
+	company_name_input = LineEdit.new()
+	company_name_input.visible = false
+	company_name_input.placeholder_text = "Enter company name..."
+	company_name_input.text_submitted.connect(_on_company_name_submitted)
+	journal_vbox.add_child(company_name_input)
+
+func _open_journal():
+	journal_open = true
+	journal_panel.visible = true
+	_populate_journal()
+
+func _close_journal():
+	journal_open = false
+	journal_panel.visible = false
+	company_name_input.visible = false
+	company_name_input.text = ""
+	founding_npc_id = ""
+
+func _populate_journal():
+	# Clear existing entries
+	for child in journal_list.get_children():
+		child.queue_free()
+
+	if discovered_problems.size() == 0:
+		var empty_label = Label.new()
+		empty_label.text = "No problems discovered yet"
+		journal_list.add_child(empty_label)
+		return
+
+	for problem in discovered_problems:
+		var row = HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		var text_label = Label.new()
+		text_label.text = problem.npc_name + ": " + problem.description
+		text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text_label)
+
+		if not company_founded:
+			var found_btn = Button.new()
+			found_btn.text = "Found Company"
+			found_btn.pressed.connect(_on_found_company_pressed.bind(problem.npc_id))
+			row.add_child(found_btn)
+
+		journal_list.add_child(row)
+
+func _on_found_company_pressed(npc_id: String):
+	founding_npc_id = npc_id
+	company_name_input.visible = true
+	company_name_input.text = ""
+	company_name_input.grab_focus()
+
+func _on_company_name_submitted(text: String):
+	if text.strip_edges().length() == 0:
+		return
+	company_name = text.strip_edges()
+	company_founded = true
+	# Find the selected problem
+	for p in discovered_problems:
+		if p.npc_id == founding_npc_id:
+			selected_problem = p
+			break
+	founding_npc_id = ""
+	company_name_input.visible = false
+	_close_journal()
+	_update_hud()
+
+# === HUD ===
+
+func _create_hud():
+	hud_panel = Panel.new()
+	hud_panel.visible = false
+	hud_panel.anchors_preset = Control.PRESET_TOP_WIDE
+	hud_panel.anchor_right = 1.0
+	hud_panel.offset_bottom = 40.0
+	$CanvasLayer.add_child(hud_panel)
+
+	hud_company_label = Label.new()
+	hud_company_label.anchors_preset = Control.PRESET_CENTER_LEFT
+	hud_company_label.offset_left = 10.0
+	hud_company_label.text = ""
+	hud_panel.add_child(hud_company_label)
+
+	hud_cash_label = Label.new()
+	hud_cash_label.anchors_preset = Control.PRESET_CENTER_RIGHT
+	hud_cash_label.offset_right = -10.0
+	hud_cash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hud_cash_label.text = ""
+	hud_panel.add_child(hud_cash_label)
+
+func _update_hud():
+	if company_founded:
+		hud_panel.visible = true
+		hud_company_label.text = company_name
+		hud_cash_label.text = "$" + str(company_cash)
+	else:
+		hud_panel.visible = false
