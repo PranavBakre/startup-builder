@@ -231,6 +231,7 @@ func _process(delta):
 			_try_move(direction)
 
 	# Animate interaction prompt
+	# TODO: Bounce is a no-op (y = y - offset + offset). Should recompute screen position each frame.
 	if interact_prompt.visible:
 		prompt_bounce_time += delta * BOUNCE_SPEED
 		var bounce_offset = sin(prompt_bounce_time) * BOUNCE_AMOUNT
@@ -321,6 +322,7 @@ func _check_npc_proximity():
 			interact_prompt.text = "Press C to chat"
 		interact_prompt.visible = true
 		# Convert NPC world position to screen position
+		# TODO: Position goes stale on zoom while stationary — call _check_npc_proximity() on zoom too
 		var npc_world_pos = adjacent_npc.position
 		var canvas_xform = get_viewport().get_canvas_transform()
 		var screen_pos = canvas_xform * npc_world_pos
@@ -456,6 +458,7 @@ func _close_journal():
 
 func _populate_journal():
 	# Clear existing entries
+	# TODO: Use free() instead of queue_free() to avoid stale children on rapid Tab toggling
 	for child in journal_list.get_children():
 		child.queue_free()
 

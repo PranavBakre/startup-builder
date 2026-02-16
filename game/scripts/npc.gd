@@ -59,5 +59,5 @@ func show_checkmark():
 	checkmark.add_theme_font_size_override("font_size", 64)
 	checkmark.add_theme_color_override("font_color", Color(0.2, 0.9, 0.4))
 	checkmark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	checkmark.position = Vector2(-20, -TILE_SIZE * 0.7)
+	checkmark.position = Vector2(-20, -TILE_SIZE * 0.7)  # TODO: -20 is a magic number, derive from sprite width
 	add_child(checkmark)
